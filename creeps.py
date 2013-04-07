@@ -10,8 +10,15 @@ import pygame
 from vec2d import vec2d
 
 SCREEN_WIDTH, SCREEN_HEIGHT = 640, 640
+
 SEX_MALE = 'm'
 SEX_FEMALE = 'f'
+
+COLOR_BLACK = (0, 0, 0)
+COLOR_WHITE = (255,255,255)
+
+RESULT_BOX_SIZE = (54, 24)
+RESULT_BOX_VERTICAL_OFFSET = 60
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +52,6 @@ class CreepSprite(pygame.sprite.Sprite):
 
     @staticmethod
     def load_sliced_sprites(w, h, filename):
-        '''
-        Specs :
-            Master can be any height.
-            Sprites frames width must be the same width
-            Master width must be len(frames)*frame.width
-        Assuming you ressources directory is named "assets"
-        '''
         images = []
         master_image = pygame.image.load(os.path.join('assets', filename)).convert_alpha()
 
@@ -65,18 +65,18 @@ class CreepSprite(pygame.sprite.Sprite):
         return cls._registry.values()
 
     @classmethod
-    def is_all_dead(cls):
+    def is_all_defeated(cls):
         return cls.get_all() == []
 
     @classmethod
     def player_shot(cls, value):
         for creep in cls.get_all():
             if creep.result == value:
-                creep.kill()
-                if cls.is_all_dead():
+                creep.defeat()
+                if cls.is_all_defeated():
                     raise StageClear
 
-    def __init__(self, font, text, screen, init_position, speed, images, fps = 10):
+    def __init__(self, game, font, text, screen, init_position, speed, images, fps = 10):
         pygame.sprite.Sprite.__init__(self)
         self._images = images
         self.screen = screen
@@ -90,11 +90,12 @@ class CreepSprite(pygame.sprite.Sprite):
         self.result = eval(text)
         self.rect = self._images[0].get_rect()
         self.size = self._images[0].get_size()
+        self.game = game
 
         self.pos = vec2d(init_position)
 
         # Calculate direction to the center of the screen
-        self.direction = (vec2d(self.screen.get_rect()[2] / 2,self.screen.get_rect()[3] / 2) - vec2d(init_position)).normalized()
+        self.direction = (vec2d(self.screen.get_size()[0] / 2,self.screen.get_size()[1] / 2) - vec2d(init_position)).normalized()
 
         self.__class__._registry[id(self)] = self
 
@@ -102,115 +103,119 @@ class CreepSprite(pygame.sprite.Sprite):
         self.update(pygame.time.get_ticks())
 
     def update(self, time_passed):
-        t = pygame.time.get_ticks()
-        if t - self._last_update > self._delay:
-            self._frame += 1
-            if self._frame >= len(self._images):
-                self._frame = 0
-            self.image = self._images[self._frame]
-            self._last_update = t
+        if not self.game.paused:
+            t = pygame.time.get_ticks()
+            if t - self._last_update > self._delay:
+                self._frame += 1
+                if self._frame >= len(self._images):
+                    self._frame = 0
+                self.image = self._images[self._frame]
+                self._last_update = t
 
-        displacement = vec2d(
-            self.direction.x * self.speed * time_passed,
-            self.direction.y * self.speed * time_passed
-        )
+            displacement = vec2d(
+                self.direction.x * self.speed * time_passed,
+                self.direction.y * self.speed * time_passed
+            )
 
-        self.pos += displacement
+            self.pos += displacement
 
     def blitme(self):
-        """ Blit the creep onto the screen that was provided in
-            the constructor.
-        """
         self.screen.blit(self.image, (self.pos.x, self.pos.y))
         text_size = self.font.size(self.text)
         label = self.font.render(self.text, 1, (255, 255, 0))
         self.screen.blit(label, (self.pos.x + self.size[0] / 2 - text_size[0] / 2, self.pos.y - 11))
 
-    def kill(self):
+    def defeat(self):
         self.__class__._registry.pop(id(self))
 
 
 class Game(object):
     def __init__(self):
-        pass
+        pygame.init()
+        self.result_font = pygame.font.Font(None, 18)
+        self.pause_font = pygame.font.Font(None, 23)
+        self.creep_font = pygame.font.SysFont('monospace', 15)
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
+        self.clock = pygame.time.Clock()
+        self.paused = False
+        self.running = False
 
-    def display_box(screen, message):
-      "Print a message in a box in the middle of the screen"
-      fontobject = pygame.font.Font(None,18)
-      pygame.draw.rect(screen, (0,0,0),
-                       ((screen.get_width() / 2) - 100,
-                        (screen.get_height() / 2) - 10,
-                        200,20), 0)
-      pygame.draw.rect(screen, (255,255,255),
-                       ((screen.get_width() / 2) - 102,
-                        (screen.get_height() / 2) - 12,
-                        204,24), 1)
-      if len(message) != 0:
-        screen.blit(fontobject.render(message, 1, (255,255,255)),
-                    ((screen.get_width() / 2) - 100, (screen.get_height() / 2) - 10))
-      pygame.display.flip()
+    def display_box(self, font, message, position, size):
+        BORDER_SIZE = 2
+        if len(message) != 0:
+            pygame.draw.rect(self.screen, COLOR_BLACK, (position[0] + BORDER_SIZE, position[1] + BORDER_SIZE, size[0] - BORDER_SIZE, size[1] - BORDER_SIZE), 0)
+            pygame.draw.rect(self.screen, COLOR_WHITE, (position[0], position[1], size[0], size[1]), 1)
+            self.screen.blit(font.render(message, 1, COLOR_WHITE), (position[0] + BORDER_SIZE, position[1] + BORDER_SIZE))
 
-    def run_game(self):
-        # Game parameters
+    def display_pause_label(self, font):
+        PAUSE_TEXT = 'PAUSE'
+        PAUSE_TEXT_VERTICAL_OFFSET = 100
 
+        text_size = font.size(PAUSE_TEXT)
+        self.screen.blit(font.render(PAUSE_TEXT, 1, COLOR_WHITE), (self.screen.get_width() / 2 - text_size[0] / 2, self.screen.get_height() / 2 - text_size[1] / 2 - PAUSE_TEXT_VERTICAL_OFFSET))
+
+    def math_level(self):
         CREEP_FILENAMES = [
             'assets/slimes/redslime.png',
             ]
-        N_CREEPS = 2
+        NUMBER_OF_CREEPS = 10
         CREEP_SPEED = 0.005
-
-        pygame.init()
-        creep_font = pygame.font.SysFont('monospace', 15)
-        screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
-
-        clock = pygame.time.Clock()
-
         background_img = pygame.image.load('assets/backgrounds/auto_fireball.jpg')
         background = pygame.transform.scale(background_img, (SCREEN_WIDTH, SCREEN_HEIGHT))
-
-        bgRect = background.get_rect()
-        screen.blit(background, bgRect)
+        background_rectangle = background.get_rect()
+        self.screen.blit(background, background_rectangle)
         pygame.display.flip()
-
         red_slime_images = CreepSprite.load_sliced_sprites(32, 32, 'slimes/redslime_strip.png')
-        player_sprite = Player(screen)
+        player_sprite = Player(self.screen)
 
-        # Create N_CREEPS random creeps.
-        for i in range(N_CREEPS):
+        result_box_position = (self.screen.get_width() / 2 - RESULT_BOX_SIZE[0] / 2, self.screen.get_height() / 2 - RESULT_BOX_VERTICAL_OFFSET)
+
+        # Create NUMBER_OF_CREEPS random creeps.
+        for i in range(NUMBER_OF_CREEPS):
             formula = '%d + %d' % (randint(0, 9), randint(0, 9))
-            CreepSprite(creep_font, formula, screen, (randint(0, SCREEN_WIDTH), randint(0, SCREEN_HEIGHT)), CREEP_SPEED, red_slime_images)
+            CreepSprite(self, self.creep_font, formula, self.screen, (randint(0, SCREEN_WIDTH), randint(0, SCREEN_HEIGHT)), CREEP_SPEED, red_slime_images)
 
         # The main game loop
-        #
-        done = False
+        self.running = True
         result = []
-        while not done:
+        while self.running:
             # Limit frame speed to 60 FPS
-            time_passed = clock.tick(60)
+            time_passed = self.clock.tick(60)
 
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_RETURN:
-                        try:
-                            CreepSprite.player_shot(eval(''.join(result)))
-                        except StageClear:
-                            print 'WIN'
-                            self.exit_game()
-                        except:
-                            pass
-                        result = []
-                    elif event.key == pygame.K_BACKSPACE:
-                        result = result[0:-1]
-                    elif event.key <= 127:
-                        result.append(chr(event.key))
+                    # Check for control keys first
                     if event.key == pygame.K_ESCAPE:
-                        done = True
+                        self.exit_game()
+                    elif event.key == 112 or event.key == 80:  # lower & upper case p key
+                        self.paused = not self.paused
+                    else:
+                        # If not control key, try game mecanics keys
+                        if not self.paused:
+                            if event.key == pygame.K_RETURN:
+                                try:
+                                    CreepSprite.player_shot(eval(''.join(result)))
+                                except StageClear:
+                                    print 'WIN'
+                                    self.exit_game()
+                                except:
+                                    pass
+                                result = []
+                            elif event.key == pygame.K_BACKSPACE:
+                                result = result[0:-1]
+                            elif event.key <= 127:
+                                result.append(chr(event.key))
 
                 if event.type == pygame.QUIT:
                     self.exit_game()
 
             # Redraw the background
-            screen.blit(background, bgRect)
+            self.screen.blit(background, background_rectangle)
+
+            self.display_box(self.result_font, ''.join(result), position=result_box_position, size=RESULT_BOX_SIZE)
+
+            if self.paused:
+                self.display_pause_label(self.pause_font)
 
             # Draw player
             player_sprite.blit()
@@ -222,6 +227,9 @@ class Game(object):
                 creep.blitme()
 
             pygame.display.flip()
+
+    def run_game(self):
+        self.math_level()
 
     def exit_game(self):
         sys.exit()
