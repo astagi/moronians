@@ -1,9 +1,13 @@
+from __future__ import absolute_import
+
 import os
 
 import pygame
 
-from literals import SEX_MALE
-from vec2d import vec2d
+from .exceptions import LevelComplete
+from .literals import COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE, SEX_MALE
+from .utils import outlined_text
+from .vec2d import vec2d
 
 
 class PlayerSprite(pygame.sprite.Sprite):
@@ -31,7 +35,7 @@ class PlayerSprite(pygame.sprite.Sprite):
 
     def update(self, time_passed):
         if self.has_won:
-            if not self.scroll_position[1] < self.pos[1] - 40:
+            if not self.scroll_position[1] < self.scroll_original_position[1] - 40:
                 displacement = vec2d(
                     self.scroll_direction.x * self.scroll_speed * time_passed,
                     self.scroll_direction.y * self.scroll_speed * time_passed
@@ -39,6 +43,7 @@ class PlayerSprite(pygame.sprite.Sprite):
                 self.scroll_position += displacement
             else:
                 if self.win_time + 8000 < pygame.time.get_ticks():
+                    self.game.can_be_paused = True
                     raise LevelComplete
 
     def blit(self):
@@ -47,12 +52,12 @@ class PlayerSprite(pygame.sprite.Sprite):
             self.game.screen.blit(self.scroll, self.scroll_position)
 
     def result(self, result):
-        if len(result) != 0:
+        if len(result) != 0 and not self.has_won:
             thought_size = self.thought_image.get_size()
             self.game.screen.blit(self.thought_image, (self.pos[0] + thought_size[1] / 2, self.pos[1] - 20))
 
             text_size = self.result_font.size(result)
-            label = textOutline(self.result_font, result, COLOR_WHITE, COLOR_ALMOST_BLACK)
+            label = outlined_text(self.result_font, result, COLOR_WHITE, COLOR_ALMOST_BLACK)
             self.game.screen.blit(label, (self.pos[0] + self.size[0] / 2 - text_size[0] / 2, self.pos[1] - 30))
 
     def win(self):
@@ -61,7 +66,8 @@ class PlayerSprite(pygame.sprite.Sprite):
             self.has_won = True
             self.win_sound.play()
             self.scroll_direction = (vec2d(self.pos[0], 0) - vec2d(self.pos)).normalized()
-            self.scroll_position = self.pos
+            self.scroll_position = ((self.pos[0] + self.size[0] / 2) - self.scroll.get_size()[0] / 2, self.pos[1] - 80)
+            self.scroll_original_position = self.scroll_position
             self.win_time = pygame.time.get_ticks()
             self.game.can_be_paused = False
 
@@ -154,7 +160,7 @@ class EnemySprite(pygame.sprite.Sprite):
         if self.alive:
             # If enemy is alive show it's formula
             text_size = self.font.size(self.text)
-            label = textOutline(self.font, self.text, COLOR_WHITE, COLOR_ALMOST_BLACK)
+            label = outlined_text(self.font, self.text, COLOR_WHITE, COLOR_ALMOST_BLACK)
 
             self.game.screen.blit(label, (self.pos.x + self.size[0] / 2 - text_size[0] / 2, self.pos.y - 11))
 

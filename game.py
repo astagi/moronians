@@ -1,4 +1,4 @@
 #!/usr/bin/env python
-from engine import Game
+from libraries.engine import Game
 
-Game.run()
+Game().run()

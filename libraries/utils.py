@@ -1,3 +1,6 @@
+import pygame
+
+
 def aspect_scale(img,(bx,by)):
     """ Scales 'img' to fit into box bx/by.
      This method will retain the original image's aspect ratio """
@@ -26,7 +29,7 @@ def aspect_scale(img,(bx,by)):
     return pygame.transform.scale(img, (int(sx), int(sy)))
 
 
-def textHollow(font, message, fontcolor):
+def hollow_text(font, message, fontcolor):
     notcolor = [c^0xFF for c in fontcolor]
     base = font.render(message, 0, fontcolor, notcolor)
     size = base.get_width() + 2, base.get_height() + 2
@@ -44,9 +47,9 @@ def textHollow(font, message, fontcolor):
     return img
 
 
-def textOutline(font, message, fontcolor, outlinecolor):
+def outlined_text(font, message, fontcolor, outlinecolor):
     base = font.render(message, 0, fontcolor)
-    outline = textHollow(font, message, outlinecolor)
+    outline = hollow_text(font, message, outlinecolor)
     img = pygame.Surface(outline.get_size(), 16)
     img.blit(base, (1, 1))
     img.blit(outline, (0, 0))

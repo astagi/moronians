@@ -9,7 +9,9 @@ import sys
 import pygame
 
 from .exceptions import LevelComplete
-from .literals import DEFAULT_SCREENSIZE, GAME_TITLE
+from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
+    DEFAULT_SCREENSIZE, GAME_TITLE, PAUSE_TEXT, PAUSE_TEXT_VERTICAL_OFFSET,
+    START_MESSAGE_TEXT)
 from .maps import Map1, Map2, Map3, Map4
 from .sprites import EnemySprite, PlayerSprite
 from .vec2d import vec2d
