@@ -6,7 +6,7 @@ class Map(object):
         pass
 
 
-class Map3(Map):
+class Map1(Map):
     def __init__(self):
         self.tileset = pygame.image.load('assets/tilesets/TileA4.png')
 
@@ -64,18 +64,19 @@ class Map1(Map):
         g = pygame.Rect(160, 230, 32, 32) #area of source image containing grass
         s = pygame.Rect(128, 416, 32, 32) #area of source image containing sand/dirt
         b = pygame.Rect(288, 320, 32, 32) #area of source image containing bush
+        x = pygame.Rect(320, 416, 32, 32) #area of source image containing bush
 
-        self.grid = [[p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p],\
-                     [p,b,b,b,b,b,p,p,p,p,b,b,b,b,b,p],\
-                     [p,b,b,g,g,g,g,p,p,g,g,g,g,b,b,p],\
-                     [p,b,g,g,g,g,g,p,p,g,g,g,g,g,b,p],\
-                     [p,b,g,g,g,p,p,p,p,p,p,g,g,g,b,p],\
-                     [p,b,g,s,g,p,s,s,s,s,p,g,s,g,b,p],\
-                     [s,s,s,s,s,s,s,g,g,s,s,s,s,s,s,s],\
-                     [s,s,s,s,s,s,s,g,g,s,s,s,s,s,s,s],\
-                     [p,b,g,s,g,p,s,s,s,s,p,g,s,g,b,p],\
-                     [p,b,g,g,g,p,p,p,p,p,p,g,g,g,b,p],\
-                     [p,b,g,g,g,g,g,p,p,g,g,g,g,g,b,p],\
-                     [p,b,b,g,g,g,g,p,p,g,g,g,g,b,b,p],\
-                     [p,b,b,b,b,b,p,p,p,p,b,b,b,b,b,p],\
-                     [p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p]]
+        self.grid = [[x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x],\
+                     [x,b,b,b,b,b,x,x,x,x,b,b,b,b,b,x],\
+                     [x,b,b,p,p,p,p,x,x,p,p,p,p,b,b,x],\
+                     [x,b,p,p,p,p,p,p,p,p,p,p,p,p,b,x],\
+                     [x,b,p,p,p,p,p,p,p,p,p,p,p,p,b,x],\
+                     [x,b,p,p,p,p,p,p,p,p,p,p,p,p,b,x],\
+                     [x,b,p,p,p,p,p,p,p,p,p,p,p,p,b,x],\
+                     [x,b,p,p,p,p,p,p,p,p,p,p,p,p,b,x],\
+                     [x,b,p,p,p,p,p,p,p,p,p,p,p,p,b,x],\
+                     [x,b,p,p,p,p,p,p,p,p,p,p,p,p,b,x],\
+                     [x,b,p,p,p,p,p,p,p,p,p,p,p,p,b,x],\
+                     [x,b,b,p,p,p,p,x,x,p,p,p,p,b,b,x],\
+                     [x,b,b,b,b,b,x,x,x,x,b,b,b,b,b,x],\
+                     [x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x]]

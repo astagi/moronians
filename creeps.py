@@ -78,8 +78,6 @@ class EnemySprite(pygame.sprite.Sprite):
         for enemy in enemies:
             if enemy.result == value:
                 enemy.defeat(enemies)
-                if EnemySprite.is_all_defeated(enemies):
-                    raise LevelComplete
 
     def __init__(self, game, font, text, screen, init_position, speed, images, fps):
         pygame.sprite.Sprite.__init__(self)
@@ -101,16 +99,16 @@ class EnemySprite(pygame.sprite.Sprite):
 
         self.pos = vec2d(init_position)
         self.smoke_images = [
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0001.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0002.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0003.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0004.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0005.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0006.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0007.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0008.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0009.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0010.png')
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0001.32x32.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0002.32x32.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0003.32x32.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0004.32x32.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0005.32x32.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0006.32x32.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0007.32x32.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0008.32x32.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0009.32x32.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0010.32x32.png')
         ]
 
         # Calculate direction to the center of the screen
@@ -144,9 +142,11 @@ class EnemySprite(pygame.sprite.Sprite):
 
     def blitme(self):
         self.screen.blit(self.image, (self.pos.x, self.pos.y))
-        text_size = self.font.size(self.text)
-        label = self.font.render(self.text, 1, (255, 255, 0))
-        self.screen.blit(label, (self.pos.x + self.size[0] / 2 - text_size[0] / 2, self.pos.y - 11))
+        if self.alive:
+            # If enemy is alive show it's formula
+            text_size = self.font.size(self.text)
+            label = self.font.render(self.text, 1, (255, 255, 0))
+            self.screen.blit(label, (self.pos.x + self.size[0] / 2 - text_size[0] / 2, self.pos.y - 11))
 
     def defeat(self, enemies):
         self.alive = False
@@ -216,6 +216,9 @@ class MathLevel(Level):
             #print pygame.sprite.collide_rect(creep, self.player_sprite)
             enemy.update(self.game.time_passed)
             enemy.blitme()
+
+        if EnemySprite.is_all_defeated(self.enemies):
+            raise LevelComplete
 
 
 class Game(object):
