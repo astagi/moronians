@@ -230,7 +230,8 @@ class Game(object):
         self.clock = pygame.time.Clock()
         self.paused = False
         self.running = False
-        pygame.display.set_caption(GAME_TITLE)
+        self.game_music = pygame.mixer.music.load('assets/music/Zander Noriega - Darker Waves_0_looping.wav')
+        self.pause_sound = pygame.mixer.Sound('assets/sounds/pause.wav')
 
     def display_box(self, font, message, position, size):
         BORDER_SIZE = 2
@@ -263,6 +264,11 @@ class Game(object):
                         self.exit_game()
                     elif event.key == 112 or event.key == 80:  # lower & upper case p key
                         self.paused = not self.paused
+                        if self.paused:
+                            pygame.mixer.music.pause()
+                            self.pause_sound.play()
+                        else:
+                            pygame.mixer.music.unpause()
                     else:
                         self.current_mode.process_event(event)
 
@@ -274,8 +280,10 @@ class Game(object):
             pygame.display.flip()
 
     def run(self):
+        pygame.display.set_caption(GAME_TITLE)
+
         math_level = MathLevel(self)
-        math_level.setup(enemies=2, speed=0.005, enemy_images=(32, 32, 'slimes/redslime_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1())
+        math_level.setup(enemies=2, speed=0.005, enemy_images=(32, 32, 'enemies/aracnid_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1())
 
         substraction_level = MathLevel(self)
         substraction_level.setup(enemies=2, speed=0.005, enemy_images=(32, 32, 'slimes/redslime_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map2())
@@ -283,6 +291,8 @@ class Game(object):
         self.current_mode = math_level
 
         self.running = True
+
+        pygame.mixer.music.play(-1)
 
         while self.running:
             try:
