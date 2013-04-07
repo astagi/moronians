@@ -8,12 +8,14 @@ import sys
 
 import pygame
 
+from .events import (EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, EVENT_STORY_SCRIPT_CAPTION,
+    EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH, EVENT_STORY_SCRIPT_POST_LAUGH_DELAY)
 from .exceptions import LevelComplete
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     DEFAULT_SCREENSIZE, GAME_TITLE, PAUSE_TEXT, PAUSE_TEXT_VERTICAL_OFFSET,
-    START_MESSAGE_TEXT)
+    START_MESSAGE_TEXT, STORY_TEXT)
 from .maps import Map1, Map2, Map3, Map4
-from .sprites import EnemySprite, PlayerSprite
+from .sprites import EnemySprite, PlayerSprite, SpaceshipSprite
 from .vec2d import vec2d
 
 logger = logging.getLogger(__name__)
@@ -124,6 +126,60 @@ class MathLevel(Level):
             self.player_sprite.win()
 
 
+class StoryLevel(Level):
+    def setup(self):
+        self.bio_ship_image = pygame.image.load('assets/enemies/bio_ship.png').convert()
+        self.bio_ship = SpaceshipSprite(self.game, image=self.bio_ship_image, speed=0.04)
+        screen_size = self.game.screen.get_size()
+        image = pygame.image.load('assets/backgrounds/earth.png').convert()
+        self.title_image = background = pygame.transform.scale(image, (self.game.screen.get_size()[0], self.game.screen.get_size()[1]))
+        self.font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 15)
+        self.caption_letter = 0
+        self.laugh_sound = pygame.mixer.Sound('assets/sounds/evil-laughter-witch.ogg')
+
+    def start(self):
+        pygame.mixer.music.load('assets/music/LongDarkLoop.ogg')
+        pygame.mixer.music.play(-1)
+        pygame.time.set_timer(EVENT_STORY_SCRIPT_CAPTION, 2000)
+
+    def update(self):
+        self.game.screen.blit(self.title_image, (0, 0))
+
+        text_size = self.font.size(STORY_TEXT[0: self.caption_letter])
+        label = self.font.render(STORY_TEXT[0: self.caption_letter], 1, COLOR_WHITE)
+        self.game.screen.blit(label, (self.game.screen.get_size()[0] / 2 - text_size[0] / 2, self.game.screen.get_size()[1] - 60))
+
+        self.bio_ship.update(self.game.time_passed)
+        self.bio_ship.blit()
+
+    def type_caption_letter(self):
+        self.caption_letter += 1
+        if self.caption_letter > len(STORY_TEXT):
+            pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 0)
+            pygame.time.set_timer(EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, 2000)
+
+
+    def process_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            raise LevelComplete
+        elif event.type == EVENT_STORY_SCRIPT_CAPTION:
+            pygame.time.set_timer(EVENT_STORY_SCRIPT_CAPTION, 0)
+            pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 150)
+        elif event.type == EVENT_STORY_SCRIPT_TYPE:
+            self.type_caption_letter()
+        elif event.type == EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP:
+            pygame.time.set_timer(EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, 0)
+            self.bio_ship.activate()
+
+        elif event.type == EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH:
+            self.laugh_sound.play()
+            pygame.time.set_timer(EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH, 0)
+            pygame.time.set_timer(EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, 4000)
+        elif event.type == EVENT_STORY_SCRIPT_POST_LAUGH_DELAY:
+            pygame.time.set_timer(EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, 0)
+            raise LevelComplete
+
+
 class Game(object):
     def __init__(self):
         pygame.init()
@@ -176,7 +232,8 @@ class Game(object):
                             pygame.mixer.music.unpause()
                     else:
                         self.current_mode.process_event(event)
-
+                else:
+                    self.current_mode.process_event(event)
             self.current_mode.update()
 
             if self.paused:
@@ -190,8 +247,11 @@ class Game(object):
         title_screen = TitleScreen(self)
         title_screen.setup()
 
+        story_level = StoryLevel(self)
+        story_level.setup()
+
         math_level = MathLevel(self)
-        math_level.setup(self.player_sprite, enemies=1, speed=0.0025, enemy_images=(32, 32, 'enemies/eye_pod_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1(), enemy_fps=8, value=100)
+        math_level.setup(self.player_sprite, enemies=8, speed=0.0025, enemy_images=(32, 32, 'enemies/eye_pod_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1(), enemy_fps=8, value=100)
 
         substraction_level = MathLevel(self)
         substraction_level.setup(self.player_sprite, enemies=6, speed=0.005, enemy_images=(32, 32, 'enemies/redslime_strip.png'), formula_function=lambda :'%d - %d' % (randint(0, 9), randint(0, 9)), map=Map2(), enemy_fps=10, value=150)
@@ -212,9 +272,14 @@ class Game(object):
                 self.main_loop()
             except LevelComplete:
                 if self.current_mode == title_screen:
+                    self.current_mode = story_level
+                    story_level.start()
+
+                elif self.current_mode == story_level:
+                    self.can_be_paused = True
+
                     self.current_mode = math_level
                     math_level.start()
-                    self.can_be_paused = True
                 elif self.current_mode == math_level:
                     self.current_mode = substraction_level
                     substraction_level.start()

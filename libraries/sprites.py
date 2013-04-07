@@ -4,6 +4,7 @@ import os
 
 import pygame
 
+from .events import EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH
 from .exceptions import LevelComplete
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     END_STAGE_SCORE, HEALTH_BAR_TEXT, SCORE_TEXT, SEX_MALE)
@@ -188,3 +189,75 @@ class EnemySprite(pygame.sprite.Sprite):
         self.enemies = enemies
         self._images = self.smoke_images
         self.death_sound.play()
+
+
+class SpaceshipSprite(pygame.sprite.Sprite):
+    def __init__(self, game, image, speed):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = image
+        self.speed = speed
+        self.game = game
+        self.rect = self.image.get_rect()
+        self.size = self.image.get_size()
+        self.pos = vec2d(self.game.screen.get_size()[0] / 2 - self.size[0] / 2, 0)
+        self._start = pygame.time.get_ticks()
+        self._last_update = 0
+        self.direction = (vec2d(self.game.screen.get_size()[0] / 2, self.game.screen.get_size()[1] / 2) - vec2d(self.pos)).normalized()
+
+        self.tractor_beam_image = pygame.image.load('assets/enemies/tractor_beam.png').convert()
+
+        self.show_tractor_beam = False
+        self.tractor_beam_active = False
+        self.active = False
+
+        self.book_active = False
+        self.book_image = pygame.image.load('assets/enemies/books.png').convert_alpha()
+        self.book_speed = 0.03
+
+    def update(self, time_passed):
+        if self.active:
+            if self.pos[1] < 40:
+                displacement = vec2d(
+                    self.direction.x * self.speed * time_passed,
+                    self.direction.y * self.speed * time_passed
+                )
+                self.pos += displacement
+            elif self.tractor_beam_active == False:
+                self.tractor_beam_active = True
+                self.book_active = True
+                self.book_position = (self.game.screen.get_size()[0] / 2, self.game.screen.get_size()[1] / 2 - 40)
+                self.book_direction = (vec2d(self.pos[0], self.pos[1]) - vec2d(self.book_position)).normalized()
+            if self.pos[1] < -69:
+                self.active = False
+                pygame.time.set_timer(EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH, 1000)
+
+        if self.book_active:
+            displacement = vec2d(
+                self.book_direction.x * self.book_speed * time_passed,
+                self.book_direction.y * self.book_speed * time_passed
+            )
+            self.book_position += displacement
+            if self.book_position[1] < 65:
+                self.tractor_beam_active = False
+                self.show_tractor_beam = False
+                self.book_active = False
+                self.direction = (vec2d(self.game.screen.get_size()[0] / 2, 0) - vec2d(self.pos)).normalized()
+                self.active = True
+                self.pos = (self.pos[0], self.pos[1] -1)
+
+        if self.tractor_beam_active:
+            self.show_tractor_beam = not self.show_tractor_beam
+
+        if self.show_tractor_beam:
+            self.game.screen.blit(self.tractor_beam_image, (self.pos[0] + 18, self.pos[1] + 25))
+
+    def blit(self):
+        if self.book_active:
+            self.game.screen.blit(self.book_image, self.book_position)
+
+        if self.active:
+            self.game.screen.blit(self.image, self.pos)
+
+    def activate(self):
+        self.active = True
+        self.original_position = self.pos

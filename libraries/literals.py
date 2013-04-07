@@ -17,3 +17,4 @@ PAUSE_TEXT = 'PAUSE'
 SCORE_TEXT = 'score'
 START_MESSAGE_TEXT = 'Press ENTER to start'
 PAUSE_TEXT_VERTICAL_OFFSET = 100  # Vertical offset of the 'PAUSE' message
+STORY_TEXT = 'Earth, year 2023'
