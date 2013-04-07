@@ -5,7 +5,8 @@ import os
 import pygame
 
 from .exceptions import LevelComplete
-from .literals import COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE, SEX_MALE
+from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
+    END_STAGE_SCORE, HEALTH_BAR_TEXT, SCORE_TEXT, SEX_MALE)
 from .utils import outlined_text
 from .vec2d import vec2d
 
@@ -20,6 +21,8 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.has_won = False
         self.win_sound = pygame.mixer.Sound('assets/players/141695__copyc4t__levelup.wav')
         self.scroll_speed = 0.008
+        self.health_bar_image = pygame.image.load('assets/players/healthBar_100x12px_3Colors.png').convert_alpha()
+        self.score = 0
 
         if sex == SEX_MALE:
             self.image = pygame.image.load('assets/players/boy.png').convert_alpha()
@@ -44,10 +47,22 @@ class PlayerSprite(pygame.sprite.Sprite):
             else:
                 if self.win_time + 8000 < pygame.time.get_ticks():
                     self.game.can_be_paused = True
+                    self.has_won = False
                     raise LevelComplete
 
     def blit(self):
         self.game.screen.blit(self.image, self.pos)
+
+        text_size = self.result_font.size(HEALTH_BAR_TEXT)
+        label = outlined_text(self.result_font, HEALTH_BAR_TEXT, COLOR_WHITE, COLOR_ALMOST_BLACK)
+        self.game.screen.blit(label, (0, 0))
+        self.game.screen.blit(self.health_bar_image, (text_size[0] + 10, 1))
+
+        score_text = '%s %d' % (SCORE_TEXT, self.score)
+        text_size = self.result_font.size(score_text)
+        label = outlined_text(self.result_font, score_text, COLOR_WHITE, COLOR_ALMOST_BLACK)
+        self.game.screen.blit(label, (self.game.screen.get_size()[0] - text_size[0] - 10, 0))
+
         if self.has_won:
             self.game.screen.blit(self.scroll, self.scroll_position)
 
@@ -62,6 +77,7 @@ class PlayerSprite(pygame.sprite.Sprite):
 
     def win(self):
         if not self.has_won:
+            self.score += END_STAGE_SCORE
             pygame.mixer.music.stop()
             self.has_won = True
             self.win_sound.play()
@@ -88,12 +104,13 @@ class EnemySprite(pygame.sprite.Sprite):
         return enemies == []
 
     @staticmethod
-    def player_shot(value, enemies):
+    def player_shot(player, value, enemies):
         for enemy in enemies:
             if enemy.result == value:
+                player.score += enemy.prize_value
                 enemy.defeat(enemies)
 
-    def __init__(self, game, font, text, init_position, speed, images, fps):
+    def __init__(self, game, font, text, init_position, speed, images, fps, value):
         pygame.sprite.Sprite.__init__(self)
         self._images = images
         self.speed = speed
@@ -109,6 +126,7 @@ class EnemySprite(pygame.sprite.Sprite):
         self.game = game
         self.alive = True
         self.loop = True
+        self.prize_value = value
 
         self.pos = vec2d(init_position)
         self.smoke_images = [

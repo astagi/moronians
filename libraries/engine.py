@@ -72,10 +72,10 @@ class TitleScreen(Level):
 
 
 class MathLevel(Level):
-    def setup(self, enemies, speed, map, enemy_images, formula_function, enemy_fps=8):
+    def setup(self, player, enemies, speed, map, enemy_images, formula_function, enemy_fps=8, value=0):
         self.result = []
         self.map = map
-        self.player_sprite = PlayerSprite(self.game)
+        self.player_sprite = player
 
         #self.result_box_position = (self.game.screen.get_width() / 2 - RESULT_BOX_SIZE[0] / 2, self.game.screen.get_height() / 2 - RESULT_BOX_VERTICAL_OFFSET)
         enemy_images = EnemySprite.load_sliced_sprites(*enemy_images)
@@ -84,7 +84,7 @@ class MathLevel(Level):
         screen_size = self.game.screen.get_size()
         for i in range(enemies):
             origin_point = (randint(0, screen_size[0]), randint(0, screen_size[1]))
-            self.enemies.append(EnemySprite(self.game, self.game.enemy_font, formula_function(), origin_point, speed, enemy_images, enemy_fps))
+            self.enemies.append(EnemySprite(self.game, self.game.enemy_font, formula_function(), origin_point, speed, enemy_images, enemy_fps, value))
 
     def start(self):
         pygame.mixer.music.load('assets/music/Zander Noriega - Darker Waves_0_looping.wav')
@@ -94,7 +94,7 @@ class MathLevel(Level):
         if event.type == pygame.KEYDOWN and not self.game.paused and not self.player_sprite.has_won:
             if event.key == pygame.K_RETURN:
                 try:
-                    EnemySprite.player_shot(literal_eval(''.join(self.result)), self.enemies)
+                    EnemySprite.player_shot(self.player_sprite, literal_eval(''.join(self.result)), self.enemies)
                 except (SyntaxError, ValueError):
                     pass
                 self.result = []
@@ -136,6 +136,7 @@ class Game(object):
         self.running = False
         self.pause_sound = pygame.mixer.Sound('assets/sounds/pause.wav')
         self.can_be_paused = False
+        self.player_sprite = PlayerSprite(self)
 
     def display_box(self, font, message, position, size):
         BORDER_SIZE = 2
@@ -190,16 +191,16 @@ class Game(object):
         title_screen.setup()
 
         math_level = MathLevel(self)
-        math_level.setup(enemies=1, speed=0.0025, enemy_images=(32, 32, 'enemies/eye_pod_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1(), enemy_fps=8)
+        math_level.setup(self.player_sprite, enemies=1, speed=0.0025, enemy_images=(32, 32, 'enemies/eye_pod_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1(), enemy_fps=8, value=100)
 
         substraction_level = MathLevel(self)
-        substraction_level.setup(enemies=6, speed=0.005, enemy_images=(32, 32, 'enemies/redslime_strip.png'), formula_function=lambda :'%d - %d' % (randint(0, 9), randint(0, 9)), map=Map2(), enemy_fps=10)
+        substraction_level.setup(self.player_sprite, enemies=6, speed=0.005, enemy_images=(32, 32, 'enemies/redslime_strip.png'), formula_function=lambda :'%d - %d' % (randint(0, 9), randint(0, 9)), map=Map2(), enemy_fps=10, value=150)
 
         multiplication_level = MathLevel(self)
-        multiplication_level.setup(enemies=4, speed=0.01, enemy_images=(32, 32, 'enemies/aracnid_strip.png'), formula_function=lambda :'%d * %d' % (randint(0, 9), randint(0, 9)), map=Map3(), enemy_fps=12)
+        multiplication_level.setup(self.player_sprite, enemies=4, speed=0.01, enemy_images=(32, 32, 'enemies/aracnid_strip.png'), formula_function=lambda :'%d * %d' % (randint(0, 9), randint(0, 9)), map=Map3(), enemy_fps=12, value=200)
 
         division_level = MathLevel(self)
-        division_level.setup(enemies=2, speed=0.02, enemy_images=(32, 32, 'enemies/flying_bot_strip.png'), formula_function=lambda :'%d / %d' % (randint(0, 9), randint(1, 9)), map=Map4(), enemy_fps=14)
+        division_level.setup(self.player_sprite, enemies=2, speed=0.02, enemy_images=(32, 32, 'enemies/flying_bot_strip.png'), formula_function=lambda :'%d / %d' % (randint(0, 9), randint(1, 9)), map=Map4(), enemy_fps=14, value=300)
 
         self.current_mode = title_screen
         title_screen.start()
