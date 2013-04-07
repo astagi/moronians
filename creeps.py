@@ -99,17 +99,19 @@ class EnemySprite(pygame.sprite.Sprite):
 
         self.pos = vec2d(init_position)
         self.smoke_images = [
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0001.32x32.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0002.32x32.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0003.32x32.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0004.32x32.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0005.32x32.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0006.32x32.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0007.32x32.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0008.32x32.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0009.32x32.png'),
-            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0010.32x32.png')
+            pygame.image.load('assets/explosions/smoke_puff/smoke_puff_0001.32x32.png'),
+            pygame.image.load('assets/explosions/smoke_puff/smoke_puff_0002.32x32.png'),
+            pygame.image.load('assets/explosions/smoke_puff/smoke_puff_0003.32x32.png'),
+            pygame.image.load('assets/explosions/smoke_puff/smoke_puff_0004.32x32.png'),
+            pygame.image.load('assets/explosions/smoke_puff/smoke_puff_0005.32x32.png'),
+            pygame.image.load('assets/explosions/smoke_puff/smoke_puff_0006.32x32.png'),
+            pygame.image.load('assets/explosions/smoke_puff/smoke_puff_0007.32x32.png'),
+            pygame.image.load('assets/explosions/smoke_puff/smoke_puff_0008.32x32.png'),
+            pygame.image.load('assets/explosions/smoke_puff/smoke_puff_0009.32x32.png'),
+            pygame.image.load('assets/explosions/smoke_puff/smoke_puff_0010.32x32.png')
         ]
+
+        self.death_sound = pygame.mixer.Sound('assets/sounds/8bit_bomb_explosion.wav')
 
         # Calculate direction to the center of the screen
         self.direction = (vec2d(self.screen.get_size()[0] / 2,self.screen.get_size()[1] / 2) - vec2d(init_position)).normalized()
@@ -153,6 +155,7 @@ class EnemySprite(pygame.sprite.Sprite):
         self.loop = False
         self.enemies = enemies
         self._images = self.smoke_images
+        self.death_sound.play()
 
 
 class Level(object):
@@ -171,10 +174,6 @@ class Level(object):
 
 class MathLevel(Level):
     def setup(self, enemies, speed, map, enemy_images, formula_function):
-        #background_img = pygame.image.load(background)
-        #self.background = pygame.transform.scale(background_img, self.game.screen.get_size())
-        #self.background_rectangle = self.background.get_rect()
-        #self.game.screen.blit(self.background, self.background_rectangle)
         self.result = []
         self.map = map
         self.player_sprite = PlayerSprite(self.game.screen)
