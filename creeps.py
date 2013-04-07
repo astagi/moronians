@@ -10,15 +10,15 @@ import pygame
 
 from vec2d import vec2d
 
-from maps import Map1, Map2, Map3
+from maps import Map1, Map2, Map3, Map4
 
-#SCREEN_WIDTH, SCREEN_HEIGHT = 640, 640
 DEFAULT_SCREENSIZE = [512, 448] #16 X 14 grid with 32px X 32px cell
 
 SEX_MALE = 'm'
 SEX_FEMALE = 'f'
 
 COLOR_BLACK = (0, 0, 0)
+COLOR_ALMOST_BLACK = (1, 1, 1)
 COLOR_WHITE = (255,255,255)
 
 RESULT_BOX_SIZE = (54, 24)
@@ -33,6 +33,32 @@ PAUSE_TEXT_VERTICAL_OFFSET = 100  # Vertical offset of the 'PAUSE' message
 logger = logging.getLogger(__name__)
 
 
+def textHollow(font, message, fontcolor):
+    notcolor = [c^0xFF for c in fontcolor]
+    base = font.render(message, 0, fontcolor, notcolor)
+    size = base.get_width() + 2, base.get_height() + 2
+    img = pygame.Surface(size, 16)
+    img.fill(notcolor)
+    base.set_colorkey(0)
+    img.blit(base, (0, 0))
+    img.blit(base, (2, 0))
+    img.blit(base, (0, 2))
+    img.blit(base, (2, 2))
+    base.set_colorkey(0)
+    base.set_palette_at(1, notcolor)
+    img.blit(base, (1, 1))
+    img.set_colorkey(notcolor)
+    return img
+
+def textOutline(font, message, fontcolor, outlinecolor):
+    base = font.render(message, 0, fontcolor)
+    outline = textHollow(font, message, outlinecolor)
+    img = pygame.Surface(outline.get_size(), 16)
+    img.blit(base, (1, 1))
+    img.blit(outline, (0, 0))
+    img.set_colorkey(0)
+    return img
+
 class LevelComplete(Exception):
     pass
 
@@ -41,6 +67,9 @@ class PlayerSprite(pygame.sprite.Sprite):
     def __init__(self, screen, sex=SEX_MALE):
         pygame.sprite.Sprite.__init__(self)
         self.screen = screen
+        self.result_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
+        self.thought_image = pygame.image.load('assets/players/thought.png').convert_alpha()
+
         if sex == SEX_MALE:
             self.image = pygame.image.load('assets/players/boy.png').convert_alpha()
         else:
@@ -55,6 +84,20 @@ class PlayerSprite(pygame.sprite.Sprite):
 
     def blit(self):
         self.screen.blit(self.image, self.pos)
+
+    def result(self, result):
+        if len(result) != 0:
+
+            thought_size = self.thought_image.get_size()
+            self.screen.blit(self.thought_image, (self.pos[0] + thought_size[1] / 2, self.pos[1] - 20))
+
+            text_size = self.result_font.size(result)
+            label = textOutline(self.result_font, result, COLOR_WHITE, COLOR_ALMOST_BLACK)
+            self.screen.blit(label, (self.pos[0] + self.size[0] / 2 - text_size[0] / 2, self.pos[1] - 30))
+
+            #pygame.draw.rect(self.screen, COLOR_BLACK, (position[0] + BORDER_SIZE, position[1] + BORDER_SIZE, size[0] - BORDER_SIZE, size[1] - BORDER_SIZE), 0)
+            #pygame.draw.rect(self.screen, COLOR_WHITE, (position[0], position[1], size[0], size[1]), 1)
+            #self.screen.blit(font.render(message, 1, COLOR_WHITE), (position[0] + BORDER_SIZE, position[1] + BORDER_SIZE))
 
 
 class EnemySprite(pygame.sprite.Sprite):
@@ -146,7 +189,8 @@ class EnemySprite(pygame.sprite.Sprite):
         if self.alive:
             # If enemy is alive show it's formula
             text_size = self.font.size(self.text)
-            label = self.font.render(self.text, 1, (255, 255, 0))
+            label = textOutline(self.font, self.text, COLOR_WHITE, COLOR_ALMOST_BLACK)
+
             self.screen.blit(label, (self.pos.x + self.size[0] / 2 - text_size[0] / 2, self.pos.y - 11))
 
     def defeat(self, enemies):
@@ -246,7 +290,7 @@ class MathLevel(Level):
         screen_size = self.game.screen.get_size()
         for i in range(enemies):
             origin_point = (randint(0, screen_size[0]), randint(0, screen_size[1]))
-            self.enemies.append(EnemySprite(self.game, self.game.creep_font, formula_function(), self.game.screen, origin_point, speed, enemy_images, enemy_fps))
+            self.enemies.append(EnemySprite(self.game, self.game.enemy_font, formula_function(), self.game.screen, origin_point, speed, enemy_images, enemy_fps))
 
     def process_event(self, event):
         if event.type == pygame.KEYDOWN and not self.game.paused:
@@ -265,9 +309,6 @@ class MathLevel(Level):
         # Redraw the background
         self.game.display_tile_map(self.map)
 
-        # Redraw the result box
-        self.game.display_box(self.game.result_font, ''.join(self.result), position=self.result_box_position, size=RESULT_BOX_SIZE)
-
         # Draw player
         self.player_sprite.blit()
 
@@ -277,6 +318,10 @@ class MathLevel(Level):
             enemy.update(self.game.time_passed)
             enemy.blitme()
 
+        # Redraw the result box
+        #self.game.display_box(self.game.result_font, ''.join(self.result), position=self.result_box_position, size=RESULT_BOX_SIZE)
+        self.player_sprite.result(''.join(self.result))
+
         if EnemySprite.is_all_defeated(self.enemies):
             raise LevelComplete
 
@@ -284,14 +329,15 @@ class MathLevel(Level):
 class Game(object):
     def __init__(self):
         pygame.init()
-        self.result_font = pygame.font.Font(None, 18)
-        self.pause_font = pygame.font.Font(None, 23)
-        self.creep_font = pygame.font.SysFont('monospace', 15)
+        self.pause_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 15)
+        self.enemy_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
+
         self.screen = pygame.display.set_mode(DEFAULT_SCREENSIZE)#, 0, 32)
         self.clock = pygame.time.Clock()
         self.paused = False
         self.running = False
         self.pause_sound = pygame.mixer.Sound('assets/sounds/pause.wav')
+        self.can_be_paused = False
 
     def start_game_music(self):
         pygame.mixer.music.load('assets/music/Zander Noriega - Darker Waves_0_looping.wav')
@@ -326,7 +372,7 @@ class Game(object):
                     # Check for control keys first
                     if event.key == 113 or event.key == 81:  # lower & upper case q key
                         self.exit_game()
-                    elif event.key == 112 or event.key == 80:  # lower & upper case p key
+                    elif (event.key == 112 or event.key == 80) and self.can_be_paused:  # lower & upper case p key
                         self.paused = not self.paused
                         if self.paused:
                             pygame.mixer.music.pause()
@@ -350,16 +396,16 @@ class Game(object):
         title_screen.setup()
 
         math_level = MathLevel(self)
-        math_level.setup(enemies=2, speed=0.0025, enemy_images=(32, 32, 'enemies/aracnid_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1(), enemy_fps=8)
+        math_level.setup(enemies=2, speed=0.0025, enemy_images=(32, 32, 'enemies/eye_pod_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1(), enemy_fps=8)
 
         substraction_level = MathLevel(self)
         substraction_level.setup(enemies=2, speed=0.005, enemy_images=(32, 32, 'enemies/redslime_strip.png'), formula_function=lambda :'%d - %d' % (randint(0, 9), randint(0, 9)), map=Map2(), enemy_fps=10)
 
         multiplication_level = MathLevel(self)
-        multiplication_level.setup(enemies=2, speed=0.01, enemy_images=(32, 32, 'enemies/redslime_strip.png'), formula_function=lambda :'%d * %d' % (randint(0, 9), randint(0, 9)), map=Map3(), enemy_fps=12)
+        multiplication_level.setup(enemies=2, speed=0.01, enemy_images=(32, 32, 'enemies/aracnid_strip.png'), formula_function=lambda :'%d * %d' % (randint(0, 9), randint(0, 9)), map=Map3(), enemy_fps=12)
 
         division_level = MathLevel(self)
-        division_level.setup(enemies=2, speed=0.02, enemy_images=(32, 32, 'enemies/redslime_strip.png'), formula_function=lambda :'%d / %d' % (randint(0, 9), randint(1, 9)), map=Map3(), enemy_fps=14)
+        division_level.setup(enemies=2, speed=0.02, enemy_images=(32, 32, 'enemies/flying_bot_strip.png'), formula_function=lambda :'%d / %d' % (randint(0, 9), randint(1, 9)), map=Map4(), enemy_fps=14)
 
         self.current_mode = title_screen
 
@@ -372,6 +418,8 @@ class Game(object):
                 if self.current_mode == title_screen:
                     self.current_mode = math_level
                     self.start_game_music()
+                    self.can_be_paused = True
+
                 elif self.current_mode == math_level:
                     self.current_mode = substraction_level
                 elif self.current_mode == substraction_level:
