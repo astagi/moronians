@@ -10,7 +10,7 @@ import pygame
 
 from vec2d import vec2d
 
-from maps import Map1, Map2
+from maps import Map1, Map2, Map3
 
 #SCREEN_WIDTH, SCREEN_HEIGHT = 640, 640
 DEFAULT_SCREENSIZE = [512, 448] #16 X 14 grid with 32px X 32px cell
@@ -27,9 +27,8 @@ RESULT_BOX_VERTICAL_OFFSET = 60
 # Game strings
 GAME_TITLE = 'Attack of the Moronians'
 PAUSE_TEXT = 'PAUSE'
-
+START_MESSAGE_TEXT = 'Press ENTER to start'
 PAUSE_TEXT_VERTICAL_OFFSET = 100  # Vertical offset of the 'PAUSE' message
-
 
 logger = logging.getLogger(__name__)
 
@@ -172,8 +171,70 @@ class Level(object):
         pass
 
 
+def aspect_scale(img,(bx,by)):
+    """ Scales 'img' to fit into box bx/by.
+     This method will retain the original image's aspect ratio """
+    ix,iy = img.get_size()
+    if ix > iy:
+        # fit to width
+        scale_factor = bx/float(ix)
+        sy = scale_factor * iy
+        if sy > by:
+            scale_factor = by/float(iy)
+            sx = scale_factor * ix
+            sy = by
+        else:
+            sx = bx
+    else:
+        # fit to height
+        scale_factor = by/float(iy)
+        sx = scale_factor * ix
+        if sx > bx:
+            scale_factor = bx/float(ix)
+            sx = bx
+            sy = scale_factor * iy
+        else:
+            sy = by
+
+    return pygame.transform.scale(img, (int(sx), int(sy)))
+
+
+class TitleScreen(Level):
+    def setup(self):
+        image = pygame.image.load('assets/backgrounds/game_title.png').convert()
+        self.title_image = background = pygame.transform.scale(image, (self.game.screen.get_size()[0], self.game.screen.get_size()[1]))
+        #self.title_image = background = aspect_scale(image, (self.game.screen.get_size()[0], self.game.screen.get_size()[1]))
+        self.show_start_message = True
+        self.font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 24)
+
+        pygame.mixer.music.load('assets/music/OveMelaaTranceBitBit.ogg')
+        pygame.mixer.music.play(-1)
+
+        self.title_delay = 1000 / 5
+        self.title_last_update = 0
+
+    def update(self):
+        # Redraw the background
+        self.game.screen.blit(self.title_image, (0, 0))
+
+        t = pygame.time.get_ticks()
+        if t - self.title_last_update > self.title_delay:
+            self.show_start_message = not self.show_start_message
+            self.title_last_update = t
+
+        if self.show_start_message:
+            text_size = self.font.size(START_MESSAGE_TEXT)
+            label = self.font.render(START_MESSAGE_TEXT, 1, COLOR_WHITE)
+            self.game.screen.blit(label, (self.game.screen.get_size()[0] / 2 - text_size[0] / 2, self.game.screen.get_size()[1] - 60))
+
+    def process_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN:
+                raise LevelComplete
+
+
 class MathLevel(Level):
-    def setup(self, enemies, speed, map, enemy_images, formula_function):
+    def setup(self, enemies, speed, map, enemy_images, formula_function, enemy_fps=8):
         self.result = []
         self.map = map
         self.player_sprite = PlayerSprite(self.game.screen)
@@ -185,7 +246,7 @@ class MathLevel(Level):
         screen_size = self.game.screen.get_size()
         for i in range(enemies):
             origin_point = (randint(0, screen_size[0]), randint(0, screen_size[1]))
-            self.enemies.append(EnemySprite(self.game, self.game.creep_font, formula_function(), self.game.screen, origin_point, speed, enemy_images, 8))
+            self.enemies.append(EnemySprite(self.game, self.game.creep_font, formula_function(), self.game.screen, origin_point, speed, enemy_images, enemy_fps))
 
     def process_event(self, event):
         if event.type == pygame.KEYDOWN and not self.game.paused:
@@ -230,8 +291,11 @@ class Game(object):
         self.clock = pygame.time.Clock()
         self.paused = False
         self.running = False
-        self.game_music = pygame.mixer.music.load('assets/music/Zander Noriega - Darker Waves_0_looping.wav')
         self.pause_sound = pygame.mixer.Sound('assets/sounds/pause.wav')
+
+    def start_game_music(self):
+        pygame.mixer.music.load('assets/music/Zander Noriega - Darker Waves_0_looping.wav')
+        pygame.mixer.music.play(-1)
 
     def display_box(self, font, message, position, size):
         BORDER_SIZE = 2
@@ -282,24 +346,38 @@ class Game(object):
     def run(self):
         pygame.display.set_caption(GAME_TITLE)
 
+        title_screen = TitleScreen(self)
+        title_screen.setup()
+
         math_level = MathLevel(self)
-        math_level.setup(enemies=2, speed=0.005, enemy_images=(32, 32, 'enemies/aracnid_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1())
+        math_level.setup(enemies=2, speed=0.0025, enemy_images=(32, 32, 'enemies/aracnid_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1(), enemy_fps=8)
 
         substraction_level = MathLevel(self)
-        substraction_level.setup(enemies=2, speed=0.005, enemy_images=(32, 32, 'slimes/redslime_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map2())
+        substraction_level.setup(enemies=2, speed=0.005, enemy_images=(32, 32, 'enemies/redslime_strip.png'), formula_function=lambda :'%d - %d' % (randint(0, 9), randint(0, 9)), map=Map2(), enemy_fps=10)
 
-        self.current_mode = math_level
+        multiplication_level = MathLevel(self)
+        multiplication_level.setup(enemies=2, speed=0.01, enemy_images=(32, 32, 'enemies/redslime_strip.png'), formula_function=lambda :'%d * %d' % (randint(0, 9), randint(0, 9)), map=Map3(), enemy_fps=12)
+
+        division_level = MathLevel(self)
+        division_level.setup(enemies=2, speed=0.02, enemy_images=(32, 32, 'enemies/redslime_strip.png'), formula_function=lambda :'%d / %d' % (randint(0, 9), randint(1, 9)), map=Map3(), enemy_fps=14)
+
+        self.current_mode = title_screen
 
         self.running = True
-
-        pygame.mixer.music.play(-1)
 
         while self.running:
             try:
                 self.main_loop()
             except LevelComplete:
-                if self.current_mode == math_level:
+                if self.current_mode == title_screen:
+                    self.current_mode = math_level
+                    self.start_game_music()
+                elif self.current_mode == math_level:
                     self.current_mode = substraction_level
+                elif self.current_mode == substraction_level:
+                    self.current_mode = multiplication_level
+                elif self.current_mode == multiplication_level:
+                    self.current_mode = division_level
             else:
                 self.running = False
 

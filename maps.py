@@ -56,7 +56,7 @@ class Map2(Map):
                      [p,p,p,p,p,p,p,p,p,p,p,p,p,p,p,p]]
 
 
-class Map1(Map):
+class Map3(Map):
     def __init__(self):
         self.tileset = pygame.image.load('assets/tilesets/TileA4.png')
 
