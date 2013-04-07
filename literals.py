@@ -1,0 +1,17 @@
+DEFAULT_SCREENSIZE = [512, 448]
+
+SEX_MALE = 'm'
+SEX_FEMALE = 'f'
+
+COLOR_BLACK = (0, 0, 0)
+COLOR_ALMOST_BLACK = (1, 1, 1)
+COLOR_WHITE = (255,255,255)
+
+RESULT_BOX_SIZE = (54, 24)
+RESULT_BOX_VERTICAL_OFFSET = 60
+
+# Game strings
+GAME_TITLE = 'Attack of the Moronians'
+PAUSE_TEXT = 'PAUSE'
+START_MESSAGE_TEXT = 'Press ENTER to start'
+PAUSE_TEXT_VERTICAL_OFFSET = 100  # Vertical offset of the 'PAUSE' message

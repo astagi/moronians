@@ -1,0 +1,2 @@
+class LevelComplete(Exception):
+    pass
