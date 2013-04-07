@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from ast import literal_eval
 import logging
 import os
 from random import randint, choice
@@ -23,11 +24,11 @@ RESULT_BOX_VERTICAL_OFFSET = 60
 logger = logging.getLogger(__name__)
 
 
-class StageClear(Exception):
+class LevelComplete(Exception):
     pass
 
 
-class Player(pygame.sprite.Sprite):
+class PlayerSprite(pygame.sprite.Sprite):
     def __init__(self, screen, sex=SEX_MALE):
         pygame.sprite.Sprite.__init__(self)
         self.screen = screen
@@ -47,9 +48,7 @@ class Player(pygame.sprite.Sprite):
         self.screen.blit(self.image, self.pos)
 
 
-class CreepSprite(pygame.sprite.Sprite):
-    _registry = {}
-
+class EnemySprite(pygame.sprite.Sprite):
     @staticmethod
     def load_sliced_sprites(w, h, filename):
         images = []
@@ -57,26 +56,22 @@ class CreepSprite(pygame.sprite.Sprite):
 
         master_width, master_height = master_image.get_size()
         for i in xrange(int(master_width / w)):
-            images.append(master_image.subsurface((i * w, 0 ,w ,h)))
+            images.append(master_image.subsurface((i * w,0 ,w ,h)))
         return images
 
-    @classmethod
-    def get_all(cls):
-        return cls._registry.values()
+    @staticmethod
+    def is_all_defeated(enemies):
+        return enemies == []
 
-    @classmethod
-    def is_all_defeated(cls):
-        return cls.get_all() == []
+    @staticmethod
+    def player_shot(value, enemies):
+        for enemy in enemies:
+            if enemy.result == value:
+                enemy.defeat(enemies)
+                if EnemySprite.is_all_defeated(enemies):
+                    raise LevelComplete
 
-    @classmethod
-    def player_shot(cls, value):
-        for creep in cls.get_all():
-            if creep.result == value:
-                creep.defeat()
-                if cls.is_all_defeated():
-                    raise StageClear
-
-    def __init__(self, game, font, text, screen, init_position, speed, images, fps = 10):
+    def __init__(self, game, font, text, screen, init_position, speed, images, fps):
         pygame.sprite.Sprite.__init__(self)
         self._images = images
         self.screen = screen
@@ -97,15 +92,13 @@ class CreepSprite(pygame.sprite.Sprite):
         # Calculate direction to the center of the screen
         self.direction = (vec2d(self.screen.get_size()[0] / 2,self.screen.get_size()[1] / 2) - vec2d(init_position)).normalized()
 
-        self.__class__._registry[id(self)] = self
-
         # Call update to set our first image.
-        self.update(pygame.time.get_ticks())
+        self.update(pygame.time.get_ticks(), force=True)
 
-    def update(self, time_passed):
+    def update(self, time_passed, force=False):
         if not self.game.paused:
             t = pygame.time.get_ticks()
-            if t - self._last_update > self._delay:
+            if t - self._last_update > self._delay or force:
                 self._frame += 1
                 if self._frame >= len(self._images):
                     self._frame = 0
@@ -125,8 +118,69 @@ class CreepSprite(pygame.sprite.Sprite):
         label = self.font.render(self.text, 1, (255, 255, 0))
         self.screen.blit(label, (self.pos.x + self.size[0] / 2 - text_size[0] / 2, self.pos.y - 11))
 
-    def defeat(self):
-        self.__class__._registry.pop(id(self))
+    def defeat(self, enemies):
+        enemies.remove(self)
+
+
+class Level(object):
+    def __init__(self, game):
+        self.game = game
+
+    def setup(self):
+        pass
+
+    def update(self):
+        pass
+
+    def process_event(self, event):
+        pass
+
+
+class MathLevel(Level):
+    def setup(self, enemies, speed, background, enemy_images, formula_function):
+
+        background_img = pygame.image.load(background)
+        self.background = pygame.transform.scale(background_img, (SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.background_rectangle = self.background.get_rect()
+        self.game.screen.blit(self.background, self.background_rectangle)
+        self.result = []
+
+        self.player_sprite = PlayerSprite(self.game.screen)
+
+        self.result_box_position = (self.game.screen.get_width() / 2 - RESULT_BOX_SIZE[0] / 2, self.game.screen.get_height() / 2 - RESULT_BOX_VERTICAL_OFFSET)
+        enemy_images = EnemySprite.load_sliced_sprites(*enemy_images)
+
+        self.enemies = []
+        for i in range(enemies):
+            self.enemies.append(EnemySprite(self.game, self.game.creep_font, formula_function(), self.game.screen, (randint(0, SCREEN_WIDTH), randint(0, SCREEN_HEIGHT)), speed, enemy_images, 8))
+
+    def process_event(self, event):
+        if event.type == pygame.KEYDOWN and not self.game.paused:
+            if event.key == pygame.K_RETURN:
+                try:
+                    EnemySprite.player_shot(literal_eval(''.join(self.result)), self.enemies)
+                except (SyntaxError, ValueError):
+                    pass
+                self.result = []
+            elif event.key == pygame.K_BACKSPACE:
+                self.result = result[0:-1]
+            elif event.key <= 127 and event.key >= 32:
+                self.result.append(chr(event.key))
+
+    def update(self):
+        # Redraw the background
+        self.game.screen.blit(self.background, self.background_rectangle)
+
+        self.game.display_box(self.game.result_font, ''.join(self.result), position=self.result_box_position, size=RESULT_BOX_SIZE)
+
+        # Draw player
+        self.player_sprite.blit()
+
+        # Update and redraw all creeps
+        for enemy in self.enemies:
+            #print pygame.sprite.collide_rect(creep, self.player_sprite)
+            enemy.update(self.game.time_passed)
+            enemy.blitme()
 
 
 class Game(object):
@@ -154,82 +208,42 @@ class Game(object):
         text_size = font.size(PAUSE_TEXT)
         self.screen.blit(font.render(PAUSE_TEXT, 1, COLOR_WHITE), (self.screen.get_width() / 2 - text_size[0] / 2, self.screen.get_height() / 2 - text_size[1] / 2 - PAUSE_TEXT_VERTICAL_OFFSET))
 
-    def math_level(self):
-        CREEP_FILENAMES = [
-            'assets/slimes/redslime.png',
-            ]
-        NUMBER_OF_CREEPS = 10
-        CREEP_SPEED = 0.005
-        background_img = pygame.image.load('assets/backgrounds/auto_fireball.jpg')
-        background = pygame.transform.scale(background_img, (SCREEN_WIDTH, SCREEN_HEIGHT))
-        background_rectangle = background.get_rect()
-        self.screen.blit(background, background_rectangle)
-        pygame.display.flip()
-        red_slime_images = CreepSprite.load_sliced_sprites(32, 32, 'slimes/redslime_strip.png')
-        player_sprite = Player(self.screen)
-
-        result_box_position = (self.screen.get_width() / 2 - RESULT_BOX_SIZE[0] / 2, self.screen.get_height() / 2 - RESULT_BOX_VERTICAL_OFFSET)
-
-        # Create NUMBER_OF_CREEPS random creeps.
-        for i in range(NUMBER_OF_CREEPS):
-            formula = '%d + %d' % (randint(0, 9), randint(0, 9))
-            CreepSprite(self, self.creep_font, formula, self.screen, (randint(0, SCREEN_WIDTH), randint(0, SCREEN_HEIGHT)), CREEP_SPEED, red_slime_images)
-
+    def main_loop(self):
         # The main game loop
         self.running = True
-        result = []
+
         while self.running:
-            # Limit frame speed to 60 FPS
-            time_passed = self.clock.tick(60)
+            self.time_passed = self.clock.tick(60)
 
             for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
+                if event.type == pygame.QUIT:
+                    self.exit_game()
+                elif event.type == pygame.KEYDOWN:
                     # Check for control keys first
-                    if event.key == pygame.K_ESCAPE:
+                    if event.key == 113 or event.key == 81:  # lower & upper case q key
                         self.exit_game()
                     elif event.key == 112 or event.key == 80:  # lower & upper case p key
                         self.paused = not self.paused
                     else:
-                        # If not control key, try game mecanics keys
-                        if not self.paused:
-                            if event.key == pygame.K_RETURN:
-                                try:
-                                    CreepSprite.player_shot(eval(''.join(result)))
-                                except StageClear:
-                                    print 'WIN'
-                                    self.exit_game()
-                                except:
-                                    pass
-                                result = []
-                            elif event.key == pygame.K_BACKSPACE:
-                                result = result[0:-1]
-                            elif event.key <= 127:
-                                result.append(chr(event.key))
+                        self.current_mode.process_event(event)
 
-                if event.type == pygame.QUIT:
-                    self.exit_game()
-
-            # Redraw the background
-            self.screen.blit(background, background_rectangle)
-
-            self.display_box(self.result_font, ''.join(result), position=result_box_position, size=RESULT_BOX_SIZE)
+            self.current_mode.update()
 
             if self.paused:
                 self.display_pause_label(self.pause_font)
 
-            # Draw player
-            player_sprite.blit()
-
-            # Update and redraw all creeps
-            for creep in CreepSprite.get_all():
-                print pygame.sprite.collide_rect(creep, player_sprite)
-                creep.update(time_passed)
-                creep.blitme()
-
             pygame.display.flip()
 
     def run_game(self):
-        self.math_level()
+        math_level = MathLevel(self)
+        math_level.setup(enemies=2, speed=0.005, background='assets/backgrounds/auto_fireball.jpg', enemy_images=(32, 32, 'slimes/redslime_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)))
+
+        self.current_mode = math_level
+        try:
+            self.main_loop()
+        except LevelComplete:
+            print "WIN"
+            self.exit_game()
 
     def exit_game(self):
         sys.exit()
