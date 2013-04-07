@@ -10,7 +10,10 @@ import pygame
 
 from vec2d import vec2d
 
-SCREEN_WIDTH, SCREEN_HEIGHT = 640, 640
+from maps import Map1, Map2
+
+#SCREEN_WIDTH, SCREEN_HEIGHT = 640, 640
+DEFAULT_SCREENSIZE = [512, 448] #16 X 14 grid with 32px X 32px cell
 
 SEX_MALE = 'm'
 SEX_FEMALE = 'f'
@@ -20,6 +23,13 @@ COLOR_WHITE = (255,255,255)
 
 RESULT_BOX_SIZE = (54, 24)
 RESULT_BOX_VERTICAL_OFFSET = 60
+
+# Game strings
+GAME_TITLE = 'Attack of the Moronians'
+PAUSE_TEXT = 'PAUSE'
+
+PAUSE_TEXT_VERTICAL_OFFSET = 100  # Vertical offset of the 'PAUSE' message
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +50,8 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.size = self.image.get_size()
         self.pos = (
-            SCREEN_WIDTH / 2 - self.size[0] / 2,
-            SCREEN_HEIGHT / 2 - self.size[1] / 2
+            self.screen.get_size()[0] / 2 - self.size[0] / 2,
+            self.screen.get_size()[1] / 2 - self.size[1] / 2
         )
 
     def blit(self):
@@ -56,7 +66,7 @@ class EnemySprite(pygame.sprite.Sprite):
 
         master_width, master_height = master_image.get_size()
         for i in xrange(int(master_width / w)):
-            images.append(master_image.subsurface((i * w,0 ,w ,h)))
+            images.append(master_image.subsurface((i * w, 0, w , h)))
         return images
 
     @staticmethod
@@ -86,8 +96,22 @@ class EnemySprite(pygame.sprite.Sprite):
         self.rect = self._images[0].get_rect()
         self.size = self._images[0].get_size()
         self.game = game
+        self.alive = True
+        self.loop = True
 
         self.pos = vec2d(init_position)
+        self.smoke_images = [
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0001.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0002.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0003.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0004.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0005.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0006.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0007.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0008.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0009.png'),
+            pygame.image.load('assets/explotions/smoke_puff/smoke_puff_0010.png')
+        ]
 
         # Calculate direction to the center of the screen
         self.direction = (vec2d(self.screen.get_size()[0] / 2,self.screen.get_size()[1] / 2) - vec2d(init_position)).normalized()
@@ -101,16 +125,22 @@ class EnemySprite(pygame.sprite.Sprite):
             if t - self._last_update > self._delay or force:
                 self._frame += 1
                 if self._frame >= len(self._images):
-                    self._frame = 0
+                    if self.loop:
+                        self._frame = 0
+                    else:
+                        self._frame -= 1
+                        self.enemies.remove(self)
+
                 self.image = self._images[self._frame]
                 self._last_update = t
 
-            displacement = vec2d(
-                self.direction.x * self.speed * time_passed,
-                self.direction.y * self.speed * time_passed
-            )
+            if self.alive:
+                displacement = vec2d(
+                    self.direction.x * self.speed * time_passed,
+                    self.direction.y * self.speed * time_passed
+                )
 
-            self.pos += displacement
+                self.pos += displacement
 
     def blitme(self):
         self.screen.blit(self.image, (self.pos.x, self.pos.y))
@@ -119,7 +149,10 @@ class EnemySprite(pygame.sprite.Sprite):
         self.screen.blit(label, (self.pos.x + self.size[0] / 2 - text_size[0] / 2, self.pos.y - 11))
 
     def defeat(self, enemies):
-        enemies.remove(self)
+        self.alive = False
+        self.loop = False
+        self.enemies = enemies
+        self._images = self.smoke_images
 
 
 class Level(object):
@@ -137,22 +170,23 @@ class Level(object):
 
 
 class MathLevel(Level):
-    def setup(self, enemies, speed, background, enemy_images, formula_function):
-
-        background_img = pygame.image.load(background)
-        self.background = pygame.transform.scale(background_img, (SCREEN_WIDTH, SCREEN_HEIGHT))
-        self.background_rectangle = self.background.get_rect()
-        self.game.screen.blit(self.background, self.background_rectangle)
+    def setup(self, enemies, speed, map, enemy_images, formula_function):
+        #background_img = pygame.image.load(background)
+        #self.background = pygame.transform.scale(background_img, self.game.screen.get_size())
+        #self.background_rectangle = self.background.get_rect()
+        #self.game.screen.blit(self.background, self.background_rectangle)
         self.result = []
-
+        self.map = map
         self.player_sprite = PlayerSprite(self.game.screen)
 
         self.result_box_position = (self.game.screen.get_width() / 2 - RESULT_BOX_SIZE[0] / 2, self.game.screen.get_height() / 2 - RESULT_BOX_VERTICAL_OFFSET)
         enemy_images = EnemySprite.load_sliced_sprites(*enemy_images)
 
         self.enemies = []
+        screen_size = self.game.screen.get_size()
         for i in range(enemies):
-            self.enemies.append(EnemySprite(self.game, self.game.creep_font, formula_function(), self.game.screen, (randint(0, SCREEN_WIDTH), randint(0, SCREEN_HEIGHT)), speed, enemy_images, 8))
+            origin_point = (randint(0, screen_size[0]), randint(0, screen_size[1]))
+            self.enemies.append(EnemySprite(self.game, self.game.creep_font, formula_function(), self.game.screen, origin_point, speed, enemy_images, 8))
 
     def process_event(self, event):
         if event.type == pygame.KEYDOWN and not self.game.paused:
@@ -163,14 +197,15 @@ class MathLevel(Level):
                     pass
                 self.result = []
             elif event.key == pygame.K_BACKSPACE:
-                self.result = result[0:-1]
+                self.result = self.result[0:-1]
             elif event.key <= 127 and event.key >= 32:
                 self.result.append(chr(event.key))
 
     def update(self):
         # Redraw the background
-        self.game.screen.blit(self.background, self.background_rectangle)
+        self.game.display_tile_map(self.map)
 
+        # Redraw the result box
         self.game.display_box(self.game.result_font, ''.join(self.result), position=self.result_box_position, size=RESULT_BOX_SIZE)
 
         # Draw player
@@ -189,10 +224,11 @@ class Game(object):
         self.result_font = pygame.font.Font(None, 18)
         self.pause_font = pygame.font.Font(None, 23)
         self.creep_font = pygame.font.SysFont('monospace', 15)
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
+        self.screen = pygame.display.set_mode(DEFAULT_SCREENSIZE)#, 0, 32)
         self.clock = pygame.time.Clock()
         self.paused = False
         self.running = False
+        pygame.display.set_caption(GAME_TITLE)
 
     def display_box(self, font, message, position, size):
         BORDER_SIZE = 2
@@ -202,16 +238,17 @@ class Game(object):
             self.screen.blit(font.render(message, 1, COLOR_WHITE), (position[0] + BORDER_SIZE, position[1] + BORDER_SIZE))
 
     def display_pause_label(self, font):
-        PAUSE_TEXT = 'PAUSE'
-        PAUSE_TEXT_VERTICAL_OFFSET = 100
-
         text_size = font.size(PAUSE_TEXT)
         self.screen.blit(font.render(PAUSE_TEXT, 1, COLOR_WHITE), (self.screen.get_width() / 2 - text_size[0] / 2, self.screen.get_height() / 2 - text_size[1] / 2 - PAUSE_TEXT_VERTICAL_OFFSET))
 
-    def main_loop(self):
-        # The main game loop
-        self.running = True
+    def display_tile_map(self, map):
+        #loops through map to set background
+        for y in range(len(map.grid)):
+            for x in range(len(map.grid[y])):
+                location = (x * 32, y * 32)
+                self.screen.blit(map.tileset, location, map.grid[y][x])
 
+    def main_loop(self):
         while self.running:
             self.time_passed = self.clock.tick(60)
 
@@ -234,19 +271,28 @@ class Game(object):
 
             pygame.display.flip()
 
-    def run_game(self):
+    def run(self):
         math_level = MathLevel(self)
-        math_level.setup(enemies=2, speed=0.005, background='assets/backgrounds/auto_fireball.jpg', enemy_images=(32, 32, 'slimes/redslime_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)))
+        math_level.setup(enemies=2, speed=0.005, enemy_images=(32, 32, 'slimes/redslime_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1())
+
+        substraction_level = MathLevel(self)
+        substraction_level.setup(enemies=2, speed=0.005, enemy_images=(32, 32, 'slimes/redslime_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map2())
 
         self.current_mode = math_level
-        try:
-            self.main_loop()
-        except LevelComplete:
-            print "WIN"
-            self.exit_game()
+
+        self.running = True
+
+        while self.running:
+            try:
+                self.main_loop()
+            except LevelComplete:
+                if self.current_mode == math_level:
+                    self.current_mode = substraction_level
+            else:
+                self.running = False
 
     def exit_game(self):
         sys.exit()
 
 
-Game().run_game()
+Game().run()
