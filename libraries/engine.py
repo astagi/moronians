@@ -230,6 +230,7 @@ class Game(object):
                             self.pause_sound.play()
                         else:
                             pygame.mixer.music.unpause()
+                            self.pause_sound.play()
                     else:
                         self.current_mode.process_event(event)
                 else:
