@@ -5,7 +5,6 @@ import os
 import pygame
 
 from .events import EVENT_STOP_GAME, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH
-from .exceptions import LevelComplete
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     HEALTH_BAR_TEXT, SCORE_TEXT, SEX_MALE)
 from .utils import outlined_text

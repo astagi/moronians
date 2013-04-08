@@ -1,6 +1,12 @@
 import pygame
 
 # Master events
+MORONIAN_CUSTOM_EVENT = pygame.USEREVENT + 0
+
+# New events
+EVENT_CHANGE_MODE = 0
+
+# Master events
 EVENT_PLAYER_DIES = pygame.USEREVENT + 0
 EVENT_STOP_GAME = pygame.USEREVENT + 1
 EVENT_GAME_OVER = pygame.USEREVENT + 2

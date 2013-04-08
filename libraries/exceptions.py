@@ -1,2 +1,2 @@
-class LevelComplete(Exception):
+class NotAMoronianEvent(Exception):
     pass
