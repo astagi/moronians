@@ -14,6 +14,7 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT, PAUSE_TEXT_VERTICAL_OFFSET,
     START_MESSAGE_TEXT, STORY_TEXT)
 from .sprites import EnemySprite, PlayerSprite, SpaceshipSprite
+from .utils import hollow_text, outlined_text
 
 
 class Level(object):
@@ -69,7 +70,7 @@ class TitleScreen(Level):
 
 
 class MathLevel(Level):
-    def setup(self, player, enemies, speed, map, enemy_images, formula_function, enemy_fps=8, value=0, attack_points=1):
+    def setup(self, player, enemies, speed, map, enemy_images, formula_function, enemy_fps=8, value=0, attack_points=1, stage_score_value=100):
         self.result = []
         self.map = map
         self.player_sprite = player
@@ -77,6 +78,7 @@ class MathLevel(Level):
         enemy_images = EnemySprite.load_sliced_sprites(*enemy_images)
         self.is_game_over = False
         self.game_over_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 32)
+        self.stage_score_value = stage_score_value
 
         self.enemies = []
         screen_size = self.game.screen.get_size()
@@ -91,7 +93,7 @@ class MathLevel(Level):
         self.is_game_over = False
 
     def process_event(self, event):
-        if event.type == pygame.KEYDOWN and not self.game.paused and not self.player_sprite.has_won and self.accept_input:
+        if event.type == pygame.KEYDOWN and not self.game.paused and self.accept_input:
             if event.key == pygame.K_RETURN:
                 try:
                     EnemySprite.player_shot(self.player_sprite, literal_eval(''.join(self.result)), self.enemies)
@@ -149,7 +151,10 @@ class MathLevel(Level):
         self.player_sprite.result(''.join(self.result))
 
         if EnemySprite.is_all_defeated(self.enemies):
-            self.player_sprite.win()
+            if self.player_sprite.alive:
+                self.player_sprite.score += self.stage_score_value
+                raise LevelComplete
+            #self.player_sprite.win_scroll()
 
 
 class StoryLevel(Level):

@@ -7,7 +7,7 @@ import pygame
 from .events import EVENT_STOP_GAME, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH
 from .exceptions import LevelComplete
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
-    END_STAGE_SCORE, HEALTH_BAR_TEXT, SCORE_TEXT, SEX_MALE)
+    HEALTH_BAR_TEXT, SCORE_TEXT, SEX_MALE)
 from .utils import outlined_text
 from .vec2d import vec2d
 
@@ -19,19 +19,15 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.result_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
         self.thought_image = pygame.image.load('assets/players/thought.png').convert_alpha()
         self.scroll = pygame.image.load('assets/players/I_Scroll02.png').convert_alpha()
-        self.has_won = False
         self.win_sound = pygame.mixer.Sound('assets/players/141695__copyc4t__levelup.wav')
         self.scroll_speed = 0.008
-        self.health = 100
+        self.total_health = 100
         self.health_bar_image = pygame.image.load('assets/players/healthBar_100x12px_3Colors.png').convert_alpha()
         self.score = 0
         self.die_sound = pygame.mixer.Sound('assets/players/falldown.wav')
-        self.death = False
-        self.alive = True
-        self.death_roll = False
         self.sex = sex
 
-        self.set_image()
+        self.reset()
 
         self.rect = self.image.get_rect()
         self.size = self.image.get_size()
@@ -51,10 +47,12 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.death = False
         self.alive = True
         self.death_roll = False
+        self.health = self.total_health
+        self.has_scroll = False
         self.set_image()
 
     def update(self, time_passed):
-        if self.has_won:
+        if self.has_scroll:
             if not self.scroll_position[1] < self.scroll_original_position[1] - 40:
                 displacement = vec2d(
                     self.scroll_direction.x * self.scroll_speed * time_passed,
@@ -64,7 +62,7 @@ class PlayerSprite(pygame.sprite.Sprite):
             else:
                 if self.win_time + 8000 < pygame.time.get_ticks():
                     self.game.can_be_paused = True
-                    self.has_won = False
+                    self.has_scroll = False
                     raise LevelComplete
 
         if self.death and self.death_time + 1000 < pygame.time.get_ticks():
@@ -86,7 +84,7 @@ class PlayerSprite(pygame.sprite.Sprite):
         text_size = self.result_font.size(HEALTH_BAR_TEXT)
         label = outlined_text(self.result_font, HEALTH_BAR_TEXT, COLOR_WHITE, COLOR_ALMOST_BLACK)
         self.game.screen.blit(label, (1, 1))
-        self.game.screen.blit(self.health_bar_image, (text_size[0] + 10, 1), area=pygame.Rect(0, 0, self.health_bar_image.get_size()[0] * float(float(self.health) / float(100)), self.health_bar_image.get_size()[1]))
+        self.game.screen.blit(self.health_bar_image, (text_size[0] + 10, 1), area=pygame.Rect(0, 0, self.health_bar_image.get_size()[0] * self.health / float(self.total_health), self.health_bar_image.get_size()[1]))
 
         # Blit score
         score_text = '%s %d' % (SCORE_TEXT, self.score)
@@ -94,11 +92,11 @@ class PlayerSprite(pygame.sprite.Sprite):
         label = outlined_text(self.result_font, score_text, COLOR_WHITE, COLOR_ALMOST_BLACK)
         self.game.screen.blit(label, (self.game.screen.get_size()[0] - text_size[0] - 10, 1))
 
-        if self.has_won:
+        if self.has_scroll:
             self.game.screen.blit(self.scroll, self.scroll_position)
 
     def result(self, result):
-        if len(result) != 0 and not self.has_won:
+        if len(result) != 0:
             thought_size = self.thought_image.get_size()
             self.game.screen.blit(self.thought_image, (self.pos[0] + thought_size[1] / 2, self.pos[1] - 20))
 
@@ -106,11 +104,10 @@ class PlayerSprite(pygame.sprite.Sprite):
             label = outlined_text(self.result_font, result, COLOR_WHITE, COLOR_ALMOST_BLACK)
             self.game.screen.blit(label, (self.pos[0] + self.size[0] / 2 - text_size[0] / 2, self.pos[1] - 30))
 
-    def win(self):
-        if not self.has_won and self.alive:
-            self.score += END_STAGE_SCORE
+    def win_scroll(self):
+        if not self.has_scroll and self.alive:
             pygame.mixer.music.stop()
-            self.has_won = True
+            self.has_scroll = True
             self.win_sound.play()
             self.scroll_direction = (vec2d(self.pos[0], 0) - vec2d(self.pos)).normalized()
             self.scroll_position = ((self.pos[0] + self.size[0] / 2) - self.scroll.get_size()[0] / 2, self.pos[1] - 80)
@@ -120,7 +117,7 @@ class PlayerSprite(pygame.sprite.Sprite):
 
     def take_damage(self, enemy):
         self.health -= enemy.attack_points
-        if self.health < 0:
+        if self.health <= 0:
             self.health = 0
             self.player_dies()
 

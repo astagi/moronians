@@ -8,13 +8,12 @@ COLOR_ALMOST_BLACK = (1, 1, 1)
 COLOR_WHITE = (255,255,255)
 RESULT_BOX_SIZE = (54, 24)
 RESULT_BOX_VERTICAL_OFFSET = 60
-END_STAGE_SCORE = 200
 
 # Game strings
 GAME_TITLE = 'Attack of the Moronians'
 HEALTH_BAR_TEXT = 'Energy'
 PAUSE_TEXT = 'PAUSE'
-SCORE_TEXT = 'score'
+SCORE_TEXT = 'Score'
 START_MESSAGE_TEXT = 'Press ENTER to start'
 PAUSE_TEXT_VERTICAL_OFFSET = 100  # Vertical offset of the 'PAUSE' message
 STORY_TEXT = 'Earth, year 2023'

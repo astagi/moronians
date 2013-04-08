@@ -18,13 +18,10 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     START_MESSAGE_TEXT, STORY_TEXT)
 from .maps import Map1, Map2, Map3, Map4
 from .sprites import PlayerSprite
-from. utils import hollow_text, outlined_text
+from .utils import hollow_text, outlined_text
 from .vec2d import vec2d
 
 logger = logging.getLogger(__name__)
-
-
-
 
 
 class Game(object):
@@ -105,7 +102,7 @@ class Game(object):
 
         math_level = MathLevel(self)
         #math_level.setup(self.player_sprite, enemies=8, speed=0.0025, enemy_images=(32, 32, 'enemies/eye_pod_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1(), enemy_fps=8, value=100, attack_points=1)
-        math_level.setup(self.player_sprite, enemies=8, speed=0.05, enemy_images=(32, 32, 'enemies/eye_pod_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1(), enemy_fps=8, value=100, attack_points=1)
+        math_level.setup(self.player_sprite, enemies=8, speed=0.05, enemy_images=(32, 32, 'enemies/eye_pod_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1(), enemy_fps=8, value=100, attack_points=50)
 
         substraction_level = MathLevel(self)
         substraction_level.setup(self.player_sprite, enemies=6, speed=0.005, enemy_images=(32, 32, 'enemies/redslime_strip.png'), formula_function=lambda :'%d - %d' % (randint(0, 9), randint(0, 9)), map=Map2(), enemy_fps=10, value=150, attack_points=2)
