@@ -56,13 +56,13 @@ class PlayerSprite(pygame.sprite.Sprite):
 
         text_size = self.result_font.size(HEALTH_BAR_TEXT)
         label = outlined_text(self.result_font, HEALTH_BAR_TEXT, COLOR_WHITE, COLOR_ALMOST_BLACK)
-        self.game.screen.blit(label, (0, 0))
+        self.game.screen.blit(label, (1, 1))
         self.game.screen.blit(self.health_bar_image, (text_size[0] + 10, 1))
 
         score_text = '%s %d' % (SCORE_TEXT, self.score)
         text_size = self.result_font.size(score_text)
         label = outlined_text(self.result_font, score_text, COLOR_WHITE, COLOR_ALMOST_BLACK)
-        self.game.screen.blit(label, (self.game.screen.get_size()[0] - text_size[0] - 10, 0))
+        self.game.screen.blit(label, (self.game.screen.get_size()[0] - text_size[0] - 10, 1))
 
         if self.has_won:
             self.game.screen.blit(self.scroll, self.scroll_position)
