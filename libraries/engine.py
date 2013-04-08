@@ -8,14 +8,17 @@ import sys
 
 import pygame
 
-from .events import (EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, EVENT_STORY_SCRIPT_CAPTION,
-    EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH, EVENT_STORY_SCRIPT_POST_LAUGH_DELAY)
+from .events import (EVENT_GAME_OVER, EVENT_JUMP_TO_TITLE, EVENT_STOP_GAME,
+    EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, EVENT_STORY_SCRIPT_CAPTION,
+    EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
+    EVENT_STORY_SCRIPT_POST_LAUGH_DELAY)
 from .exceptions import LevelComplete
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
-    DEFAULT_SCREENSIZE, GAME_TITLE, PAUSE_TEXT, PAUSE_TEXT_VERTICAL_OFFSET,
+    DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT, PAUSE_TEXT_VERTICAL_OFFSET,
     START_MESSAGE_TEXT, STORY_TEXT)
 from .maps import Map1, Map2, Map3, Map4
 from .sprites import EnemySprite, PlayerSprite, SpaceshipSprite
+from. utils import hollow_text, outlined_text
 from .vec2d import vec2d
 
 logger = logging.getLogger(__name__)
@@ -74,26 +77,29 @@ class TitleScreen(Level):
 
 
 class MathLevel(Level):
-    def setup(self, player, enemies, speed, map, enemy_images, formula_function, enemy_fps=8, value=0):
+    def setup(self, player, enemies, speed, map, enemy_images, formula_function, enemy_fps=8, value=0, attack_points=1):
         self.result = []
         self.map = map
         self.player_sprite = player
-
         #self.result_box_position = (self.game.screen.get_width() / 2 - RESULT_BOX_SIZE[0] / 2, self.game.screen.get_height() / 2 - RESULT_BOX_VERTICAL_OFFSET)
         enemy_images = EnemySprite.load_sliced_sprites(*enemy_images)
+        self.is_game_over = False
+        self.game_over_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 32)
 
         self.enemies = []
         screen_size = self.game.screen.get_size()
         for i in range(enemies):
             origin_point = (randint(0, screen_size[0]), randint(0, screen_size[1]))
-            self.enemies.append(EnemySprite(self.game, self.game.enemy_font, formula_function(), origin_point, speed, enemy_images, enemy_fps, value))
+            self.enemies.append(EnemySprite(self.game, self.game.enemy_font, formula_function(), origin_point, speed, enemy_images, enemy_fps, value, attack_points=attack_points))
 
     def start(self):
         pygame.mixer.music.load('assets/music/Zander Noriega - Darker Waves_0_looping.wav')
         pygame.mixer.music.play(-1)
+        self.accept_input = True
+        self.is_game_over = False
 
     def process_event(self, event):
-        if event.type == pygame.KEYDOWN and not self.game.paused and not self.player_sprite.has_won:
+        if event.type == pygame.KEYDOWN and not self.game.paused and not self.player_sprite.has_won and self.accept_input:
             if event.key == pygame.K_RETURN:
                 try:
                     EnemySprite.player_shot(self.player_sprite, literal_eval(''.join(self.result)), self.enemies)
@@ -104,6 +110,27 @@ class MathLevel(Level):
                 self.result = self.result[0:-1]
             elif event.key <= 127 and event.key >= 32:
                 self.result.append(chr(event.key))
+        if event.type == EVENT_STOP_GAME:
+            self.stop_game()
+        elif event.type == EVENT_GAME_OVER:
+            self.game_over()
+
+    def stop_game(self):
+        self.accept_input = False
+        self.result = []
+        pygame.mixer.music.stop()
+        for enemy in self.enemies:
+            if enemy.alive:
+                enemy.defeat(self.enemies)
+
+        pygame.time.set_timer(EVENT_GAME_OVER, 3000)
+
+    def game_over(self):
+        self.is_game_over = True
+        pygame.time.set_timer(EVENT_GAME_OVER, 0)
+        pygame.mixer.music.load('assets/music/lose music 3 - 2.wav')
+        pygame.mixer.music.play()
+        pygame.time.set_timer(EVENT_JUMP_TO_TITLE, 3000)
 
     def update(self):
         # Redraw the background
@@ -113,9 +140,16 @@ class MathLevel(Level):
         self.player_sprite.update(self.game.time_passed)
         self.player_sprite.blit()
 
+        if self.is_game_over:
+            text_size = self.game_over_font.size(GAME_OVER_TEXT)
+            label = outlined_text(self.game_over_font, GAME_OVER_TEXT, COLOR_WHITE, COLOR_ALMOST_BLACK)
+            self.game.screen.blit(label, (self.game.screen.get_size()[0] / 2 - text_size[0] / 2, self.game.screen.get_size()[1] / 2 - 90))
+
         # Update and redraw all creeps
         for enemy in self.enemies:
-            #print pygame.sprite.collide_rect(enemy, self.player_sprite)
+            if pygame.sprite.collide_mask(enemy, self.player_sprite) and enemy.alive:
+                self.player_sprite.take_damage(enemy)
+                enemy.defeat(self.enemies)
             enemy.update(self.game.time_passed)
             enemy.blitme()
 
@@ -157,7 +191,6 @@ class StoryLevel(Level):
         if self.caption_letter > len(STORY_TEXT):
             pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 0)
             pygame.time.set_timer(EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, 2000)
-
 
     def process_event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -211,7 +244,6 @@ class IntermissionLevel(Level):
         if self.caption_letter > len(STORY_TEXT):
             pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 0)
             pygame.time.set_timer(EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, 2000)
-
 
     def process_event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -273,6 +305,11 @@ class Game(object):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.exit_game()
+                elif event.type == EVENT_JUMP_TO_TITLE:
+                    pygame.time.set_timer(EVENT_JUMP_TO_TITLE, 0)
+                    self.player_sprite.reset()
+                    self.current_mode = self.title_screen
+                    self.title_screen.start()
                 elif event.type == pygame.KEYDOWN:
                     # Check for control keys first
                     if event.key == 113 or event.key == 81:  # lower & upper case q key
@@ -299,26 +336,27 @@ class Game(object):
     def run(self):
         pygame.display.set_caption(GAME_TITLE)
 
-        title_screen = TitleScreen(self)
-        title_screen.setup()
+        self.title_screen = TitleScreen(self)
+        self.title_screen.setup()
 
         story_level = StoryLevel(self)
         story_level.setup()
 
         math_level = MathLevel(self)
-        math_level.setup(self.player_sprite, enemies=8, speed=0.0025, enemy_images=(32, 32, 'enemies/eye_pod_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1(), enemy_fps=8, value=100)
+        math_level.setup(self.player_sprite, enemies=8, speed=0.0025, enemy_images=(32, 32, 'enemies/eye_pod_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1(), enemy_fps=8, value=100, attack_points=1)
+        #math_level.setup(self.player_sprite, enemies=8, speed=0.05, enemy_images=(32, 32, 'enemies/eye_pod_strip.png'), formula_function=lambda :'%d + %d' % (randint(0, 9), randint(0, 9)), map=Map1(), enemy_fps=8, value=100, attack_points=1)
 
         substraction_level = MathLevel(self)
-        substraction_level.setup(self.player_sprite, enemies=6, speed=0.005, enemy_images=(32, 32, 'enemies/redslime_strip.png'), formula_function=lambda :'%d - %d' % (randint(0, 9), randint(0, 9)), map=Map2(), enemy_fps=10, value=150)
+        substraction_level.setup(self.player_sprite, enemies=6, speed=0.005, enemy_images=(32, 32, 'enemies/redslime_strip.png'), formula_function=lambda :'%d - %d' % (randint(0, 9), randint(0, 9)), map=Map2(), enemy_fps=10, value=150, attack_points=2)
 
         multiplication_level = MathLevel(self)
-        multiplication_level.setup(self.player_sprite, enemies=4, speed=0.01, enemy_images=(32, 32, 'enemies/aracnid_strip.png'), formula_function=lambda :'%d * %d' % (randint(0, 9), randint(0, 9)), map=Map3(), enemy_fps=12, value=200)
+        multiplication_level.setup(self.player_sprite, enemies=4, speed=0.01, enemy_images=(32, 32, 'enemies/aracnid_strip.png'), formula_function=lambda :'%d * %d' % (randint(0, 9), randint(0, 9)), map=Map3(), enemy_fps=12, value=200, attack_points=4)
 
         division_level = MathLevel(self)
-        division_level.setup(self.player_sprite, enemies=2, speed=0.02, enemy_images=(32, 32, 'enemies/flying_bot_strip.png'), formula_function=lambda :'%d / %d' % (randint(0, 9), randint(1, 9)), map=Map4(), enemy_fps=14, value=300)
+        division_level.setup(self.player_sprite, enemies=2, speed=0.02, enemy_images=(32, 32, 'enemies/flying_bot_strip.png'), formula_function=lambda :'%d / %d' % (randint(0, 9), randint(1, 9)), map=Map4(), enemy_fps=14, value=300, attack_points=8)
 
-        self.current_mode = title_screen
-        title_screen.start()
+        self.current_mode = self.title_screen
+        self.title_screen.start()
 
         self.running = True
 
@@ -326,7 +364,7 @@ class Game(object):
             try:
                 self.main_loop()
             except LevelComplete:
-                if self.current_mode == title_screen:
+                if self.current_mode == self.title_screen:
                     self.current_mode = story_level
                     story_level.start()
 

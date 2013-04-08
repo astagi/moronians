@@ -4,7 +4,7 @@ import os
 
 import pygame
 
-from .events import EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH
+from .events import EVENT_STOP_GAME, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH
 from .exceptions import LevelComplete
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     END_STAGE_SCORE, HEALTH_BAR_TEXT, SCORE_TEXT, SEX_MALE)
@@ -22,13 +22,16 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.has_won = False
         self.win_sound = pygame.mixer.Sound('assets/players/141695__copyc4t__levelup.wav')
         self.scroll_speed = 0.008
+        self.health = 100
         self.health_bar_image = pygame.image.load('assets/players/healthBar_100x12px_3Colors.png').convert_alpha()
         self.score = 0
+        self.die_sound = pygame.mixer.Sound('assets/players/falldown.wav')
+        self.death = False
+        self.alive = True
+        self.death_roll = False
+        self.sex = sex
 
-        if sex == SEX_MALE:
-            self.image = pygame.image.load('assets/players/boy.png').convert_alpha()
-        else:
-            self.image = pygame.image.load('assets/players/girl.png').convert_alpha()
+        self.set_image()
 
         self.rect = self.image.get_rect()
         self.size = self.image.get_size()
@@ -36,6 +39,19 @@ class PlayerSprite(pygame.sprite.Sprite):
             self.game.screen.get_size()[0] / 2 - self.size[0] / 2,
             self.game.screen.get_size()[1] / 2 - self.size[1] / 2
         )
+        self.rect.topleft = [self.pos[0], self.pos[1]]
+
+    def set_image(self):
+        if self.sex == SEX_MALE:
+            self.image = pygame.image.load('assets/players/boy.png').convert_alpha()
+        else:
+            self.image = pygame.image.load('assets/players/girl.png').convert_alpha()
+
+    def reset(self):
+        self.death = False
+        self.alive = True
+        self.death_roll = False
+        self.set_image()
 
     def update(self, time_passed):
         if self.has_won:
@@ -51,14 +67,28 @@ class PlayerSprite(pygame.sprite.Sprite):
                     self.has_won = False
                     raise LevelComplete
 
-    def blit(self):
-        self.game.screen.blit(self.image, self.pos)
+        if self.death and self.death_time + 1000 < pygame.time.get_ticks():
+            self.die_sound.play()
+            self.death_roll = True
+            self.death = False
 
+    def blit(self):
+        if self.death_roll:
+            if self.sex == SEX_MALE:
+                self.image = pygame.image.load('assets/players/boy_left_view_2.png').convert_alpha()
+            else:
+                self.image = pygame.image.load('assets/players/girl_left_view_2.png').convert_alpha()
+            self.game.screen.blit(pygame.transform.rotozoom(self.image, 90, 1), self.pos)
+        else:
+            self.game.screen.blit(self.image, self.pos)
+
+        # Blit health bar
         text_size = self.result_font.size(HEALTH_BAR_TEXT)
         label = outlined_text(self.result_font, HEALTH_BAR_TEXT, COLOR_WHITE, COLOR_ALMOST_BLACK)
         self.game.screen.blit(label, (1, 1))
-        self.game.screen.blit(self.health_bar_image, (text_size[0] + 10, 1))
+        self.game.screen.blit(self.health_bar_image, (text_size[0] + 10, 1), area=pygame.Rect(0, 0, self.health_bar_image.get_size()[0] * float(float(self.health) / float(100)), self.health_bar_image.get_size()[1]))
 
+        # Blit score
         score_text = '%s %d' % (SCORE_TEXT, self.score)
         text_size = self.result_font.size(score_text)
         label = outlined_text(self.result_font, score_text, COLOR_WHITE, COLOR_ALMOST_BLACK)
@@ -77,7 +107,7 @@ class PlayerSprite(pygame.sprite.Sprite):
             self.game.screen.blit(label, (self.pos[0] + self.size[0] / 2 - text_size[0] / 2, self.pos[1] - 30))
 
     def win(self):
-        if not self.has_won:
+        if not self.has_won and self.alive:
             self.score += END_STAGE_SCORE
             pygame.mixer.music.stop()
             self.has_won = True
@@ -87,6 +117,19 @@ class PlayerSprite(pygame.sprite.Sprite):
             self.scroll_original_position = self.scroll_position
             self.win_time = pygame.time.get_ticks()
             self.game.can_be_paused = False
+
+    def take_damage(self, enemy):
+        self.health -= enemy.attack_points
+        if self.health < 0:
+            self.health = 0
+            self.player_dies()
+
+    def player_dies(self):
+        self.game.can_be_paused = False
+        self.alive = False
+        self.death = True
+        self.death_time = pygame.time.get_ticks()
+        pygame.event.post(pygame.event.Event(EVENT_STOP_GAME))
 
 
 class EnemySprite(pygame.sprite.Sprite):
@@ -111,7 +154,7 @@ class EnemySprite(pygame.sprite.Sprite):
                 player.score += enemy.prize_value
                 enemy.defeat(enemies)
 
-    def __init__(self, game, font, text, init_position, speed, images, fps, value):
+    def __init__(self, game, font, text, init_position, speed, images, fps, value, attack_points):
         pygame.sprite.Sprite.__init__(self)
         self._images = images
         self.speed = speed
@@ -128,6 +171,7 @@ class EnemySprite(pygame.sprite.Sprite):
         self.alive = True
         self.loop = True
         self.prize_value = value
+        self.attack_points = attack_points
 
         self.pos = vec2d(init_position)
         self.smoke_images = [
@@ -173,6 +217,7 @@ class EnemySprite(pygame.sprite.Sprite):
                 )
 
                 self.pos += displacement
+                self.rect.topleft = [self.pos.x, self.pos.y]
 
     def blitme(self):
         self.game.screen.blit(self.image, (self.pos.x, self.pos.y))
@@ -184,11 +229,12 @@ class EnemySprite(pygame.sprite.Sprite):
             self.game.screen.blit(label, (self.pos.x + self.size[0] / 2 - text_size[0] / 2, self.pos.y - 11))
 
     def defeat(self, enemies):
-        self.alive = False
-        self.loop = False
-        self.enemies = enemies
-        self._images = self.smoke_images
-        self.death_sound.play()
+        if self.alive:
+            self.alive = False
+            self.loop = False
+            self.enemies = enemies
+            self._images = self.smoke_images
+            self.death_sound.play()
 
 
 class SpaceshipSprite(pygame.sprite.Sprite):
