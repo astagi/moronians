@@ -163,6 +163,7 @@ class PlayLevel(Level):
 
         self.game.can_be_paused = True
         self.mode = self.MODE_RUNNING
+        self.game.player_sprite.reset_position()
 
     def on_event(self, event):
         if event.type == pygame.KEYDOWN and self.is_game_over:

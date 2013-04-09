@@ -23,8 +23,19 @@ from .vec2d import vec2d
 #
 #    def
 
+class CustomSprite(pygame.sprite.Sprite):
+    @staticmethod
+    def load_sliced_sprites(w, h, filename):
+        images = []
+        master_image = pygame.image.load(os.path.join('assets', filename)).convert_alpha()
 
-class PlayerSprite(pygame.sprite.Sprite):
+        master_width, master_height = master_image.get_size()
+        for i in xrange(int(master_width / w)):
+            images.append(master_image.subsurface((i * w, 0, w , h)))
+        return images
+
+
+class PlayerSprite(CustomSprite):
     def __init__(self, game, sex=SEX_MALE):
         pygame.sprite.Sprite.__init__(self)
         self.game = game
@@ -39,6 +50,11 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.die_sound = pygame.mixer.Sound('assets/players/falldown.wav')
         self.sex = sex
         self.speed = 0.05
+        self.fps = 8
+        self.walk_down_images = PlayerSprite.load_sliced_sprites(34, 34, 'players/boy_walk_down_stripe.png')
+        self.walk_up_images = PlayerSprite.load_sliced_sprites(34, 34, 'players/boy_walk_up_stripe.png')
+        self.walk_left_images = PlayerSprite.load_sliced_sprites(34, 34, 'players/boy_walk_left_stripe.png')
+        self.walk_right_images = PlayerSprite.load_sliced_sprites(34, 34, 'players/boy_walk_right_stripe.png')
 
         self.reset()
 
@@ -49,12 +65,22 @@ class PlayerSprite(pygame.sprite.Sprite):
             self.game.screen.get_size()[1] / 2 - self.size[1] / 2
         )
         self.rect.topleft = [self.pos[0], self.pos[1]]
+        self._images = []
+
+        self._start = pygame.time.get_ticks()
+        self._delay = 1000 / self.fps
+        self._last_update = 0
+        self._frame = 0
+
+        # Call update to set our first image.
+        self.update(pygame.time.get_ticks(), force=True)
 
     def set_image(self):
-        if self.sex == SEX_MALE:
-            self.image = pygame.image.load('assets/players/boy.png').convert_alpha()
-        else:
-            self.image = pygame.image.load('assets/players/girl.png').convert_alpha()
+        self.image = self.walk_down_images[0]
+        #if self.sex == SEX_MALE:
+        #    self.image = pygame.image.load('assets/players/boy.png').convert_alpha()
+        #else:
+        #    self.image = pygame.image.load('assets/players/girl.png').convert_alpha()
 
     def reset(self):
         self.death = False
@@ -66,6 +92,13 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.set_image()
         self.answer = []
 
+    def reset_position(self):
+        self.pos = (
+            self.game.screen.get_size()[0] / 2 - self.size[0] / 2,
+            self.game.screen.get_size()[1] / 2 - self.size[1] / 2
+        )
+        self.rect.topleft = [self.pos[0], self.pos[1]]
+
     def on_event(self, event):
         if event.type == pygame.KEYDOWN and not self.game.paused:
             if event.key == pygame.K_RETURN:
@@ -76,16 +109,16 @@ class PlayerSprite(pygame.sprite.Sprite):
             elif event.key <= 127 and event.key >= 32:
                 self.answer.append(chr(event.key))
 
-            #if event.key == pygame.K_LEFT:
-            #    sprite=pygame.image.load('left.png')
-            #elif event.key == K_RIGHT:
-            #    sprite=pygame.image.load('right.png')
-            #elif event.key == K_UP:
-            #    sprite=pygame.image.load('up.png')
-            #elif event.key == K_DOWN:
-            #    sprite=pygame.image.load('down.png')
+            if event.key == pygame.K_DOWN:
+                self._images = self.walk_down_images
+            elif event.key == pygame.K_UP:
+                self._images = self.walk_up_images
+            elif event.key == pygame.K_RIGHT:
+                self._images = self.walk_right_images
+            elif event.key == pygame.K_LEFT:
+                self._images = self.walk_left_images
 
-    def update(self, time_passed):
+    def update(self, time_passed, force=False):
         keys_pressed = pygame.key.get_pressed()
 
         direction_y = 0
@@ -111,18 +144,16 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.direction = vec2d(direction_x ,direction_y).normalized()
 
         if not self.game.paused:
-            #t = pygame.time.get_ticks()
-            #if t - self._last_update > self._delay or force:
-            #    self._frame += 1
-            #    if self._frame >= len(self._images):
-            #        if self.loop:
-            #            self._frame = 0
-            #        else:
-            #            self._frame -= 1
-            #            self.enemies.remove(self)
-
-            #    self.image = self._images[self._frame]
-            #    self._last_update = t
+            if direction_x != 0 or direction_y != 0:
+                t = pygame.time.get_ticks()
+                if t - self._last_update > self._delay or force:
+                    self._frame += 1
+                    if self._frame >= len(self._images):
+                        self._frame = 0
+                    self.image = self._images[self._frame]
+                    self._last_update = t
+            else:
+                self._frame = 0
 
             if self.alive:
                 displacement = vec2d(
@@ -211,17 +242,7 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.answer = []
 
 
-class EnemySprite(pygame.sprite.Sprite):
-    @staticmethod
-    def load_sliced_sprites(w, h, filename):
-        images = []
-        master_image = pygame.image.load(os.path.join('assets', filename)).convert_alpha()
-
-        master_width, master_height = master_image.get_size()
-        for i in xrange(int(master_width / w)):
-            images.append(master_image.subsurface((i * w, 0, w , h)))
-        return images
-
+class EnemySprite(CustomSprite):
     @staticmethod
     def is_all_defeated(enemies):
         return enemies == []
