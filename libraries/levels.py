@@ -5,6 +5,7 @@ from random import randint, choice
 
 import pygame
 
+from . import get_version
 from .events import (EVENT_GAME_OVER, EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP,
     EVENT_STORY_SCRIPT_CAPTION, EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
     EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, EVENT_CHANGE_LEVEL)
@@ -12,7 +13,7 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT, PAUSE_TEXT_VERTICAL_OFFSET,
     START_MESSAGE_TEXT, STORY_TEXT, GAME_LEVEL_STORY, GAME_LEVEL_ADDITION_LEVEL,
     GAME_LEVEL_SUBSTRACT_LEVEL, GAME_LEVEL_MULTIPLICATION_LEVEL, GAME_LEVEL_DIVISION_LEVEL,
-    GAME_LEVEL_TITLE)
+    GAME_LEVEL_TITLE, VERSION_TEXT, CREDITS_TEXT)
 from .maps import Map1, Map2, Map3, Map4
 from .sprites import EnemySprite, PlayerSprite, SpaceshipSprite
 from .utils import check_event, hollow_text, outlined_text, post_event
@@ -43,6 +44,8 @@ class TitleScreen(Level):
         #self.title_image = background = aspect_scale(image, (self.game.screen.get_size()[0], self.game.screen.get_size()[1]))
         self.show_start_message = True
         self.font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 24)
+        self.credit_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 9)
+        self.version_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 9)
         self.title_delay = 1000 / 5  # 5 FPS
         self.title_last_update = 0
 
@@ -65,6 +68,14 @@ class TitleScreen(Level):
             text_size = self.font.size(START_MESSAGE_TEXT)
             label = self.font.render(START_MESSAGE_TEXT, 1, COLOR_WHITE)
             self.game.screen.blit(label, (self.game.screen.get_size()[0] / 2 - text_size[0] / 2, self.game.screen.get_size()[1] - 60))
+
+        text_size = self.credit_font.size(CREDITS_TEXT)
+        label = self.credit_font.render(CREDITS_TEXT, 1, COLOR_WHITE)
+        self.game.screen.blit(label, (self.game.screen.get_size()[0] / 2 - text_size[0] / 2, self.game.screen.get_size()[1] - 20))
+
+        text_size = self.credit_font.size(get_version())
+        label = self.credit_font.render(get_version(), 1, COLOR_WHITE)
+        self.game.screen.blit(label, (self.game.screen.get_size()[0] - text_size[0] - 8, self.game.screen.get_size()[1] - 20))
 
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:

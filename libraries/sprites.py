@@ -45,11 +45,12 @@ class PlayerSprite(CustomSprite):
         self.win_sound = pygame.mixer.Sound('assets/players/141695__copyc4t__levelup.wav')
         self.scroll_speed = 0.008
         self.total_health = 100
+        self.hit_score_penalty = 100
         self.health_bar_image = pygame.image.load('assets/players/healthBar_100x12px_3Colors.png').convert_alpha()
         self.score = 0
         self.die_sound = pygame.mixer.Sound('assets/players/falldown.wav')
         self.sex = sex
-        self.speed = 0.05
+        self.speed = 0.08
         self.fps = 8
         self.walk_down_images = PlayerSprite.load_sliced_sprites(34, 34, 'players/boy_walk_down_stripe.png')
         self.walk_up_images = PlayerSprite.load_sliced_sprites(34, 34, 'players/boy_walk_up_stripe.png')
@@ -229,6 +230,10 @@ class PlayerSprite(CustomSprite):
             self.game.can_be_paused = False
 
     def take_damage(self, enemy):
+        self.score -= self.hit_score_penalty
+        if self.score < 0:
+            self.score = 0
+
         self.health -= enemy.attack_points
         if self.health <= 0:
             self.health = 0
