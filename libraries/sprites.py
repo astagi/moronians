@@ -46,6 +46,7 @@ class PlayerSprite(CustomSprite):
         self.scroll_speed = 0.008
         self.total_health = 100
         self.hit_score_penalty = 100
+        self.miss_score_penalty = 50
         self.health_bar_image = pygame.image.load('assets/players/healthBar_100x12px_3Colors.png').convert_alpha()
         self.score = 0
         self.die_sound = pygame.mixer.Sound('assets/players/falldown.wav')
@@ -246,6 +247,11 @@ class PlayerSprite(CustomSprite):
         self.death_time = pygame.time.get_ticks()
         self.answer = []
 
+    def player_misses_shot(self):
+        self.score -= self.miss_score_penalty
+        if self.score < 0:
+            self.score = 0
+
 
 class EnemySprite(CustomSprite):
     @staticmethod
@@ -254,10 +260,15 @@ class EnemySprite(CustomSprite):
 
     @staticmethod
     def player_shot(player, answer, enemies):
+        hit = False
         for enemy in enemies:
             if enemy.answer == answer:
+                hit = True
                 player.score += enemy.prize_value
                 enemy.defeat(enemies)
+
+        if hit == False:
+            player.player_misses_shot()
 
     def __init__(self, game, font, question, answer, init_position, speed, images, fps, value, attack_points):
         pygame.sprite.Sprite.__init__(self)

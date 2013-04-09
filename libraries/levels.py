@@ -41,7 +41,6 @@ class TitleScreen(Level):
         self.game = game
         image = pygame.image.load('assets/backgrounds/game_title.png').convert()
         self.title_image = background = pygame.transform.scale(image, (self.game.screen.get_size()[0], self.game.screen.get_size()[1]))
-        #self.title_image = background = aspect_scale(image, (self.game.screen.get_size()[0], self.game.screen.get_size()[1]))
         self.show_start_message = True
         self.font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 24)
         self.credit_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 9)
