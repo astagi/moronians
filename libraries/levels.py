@@ -53,13 +53,14 @@ class TitleScreen(Level):
         self.game.player_sprite.reset()
 
     def on_update(self):
-        # Redraw the background
-        self.game.screen.blit(self.title_image, (0, 0))
-
         t = pygame.time.get_ticks()
         if t - self.title_last_update > self.title_delay:
             self.show_start_message = not self.show_start_message
             self.title_last_update = t
+
+    def blit(self):
+        # Redraw the background
+        self.game.screen.blit(self.title_image, (0, 0))
 
         if self.show_start_message:
             text_size = self.font.size(START_MESSAGE_TEXT)
@@ -95,13 +96,15 @@ class StoryLevel(Level):
         pygame.time.set_timer(EVENT_STORY_SCRIPT_CAPTION, 2000)
 
     def on_update(self):
+        self.bio_ship.update(self.game.time_passed)
+
+    def blit(self):
         self.game.screen.blit(self.title_image, (0, 0))
 
         text_size = self.font.size(STORY_TEXT[0: self.caption_letter])
         label = self.font.render(STORY_TEXT[0: self.caption_letter], 1, COLOR_WHITE)
         self.game.screen.blit(label, (self.game.screen.get_size()[0] / 2 - text_size[0] / 2, self.game.screen.get_size()[1] - 60))
 
-        self.bio_ship.update(self.game.time_passed)
         self.bio_ship.blit()
 
     def type_caption_letter(self):
@@ -133,12 +136,16 @@ class StoryLevel(Level):
 
 
 class MathLevel(Level):
+    MODE_RUNNING = 0
+    MODE_CLEAR = 0
+
     def __init__(self, game):
         self.game = game
         self.is_game_over = False
         self.game_over_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 32)
         self.result = []
         self.stage_score_value = 0
+        self.mode = self.MODE_RUNNING
 
     def on_start(self):
         pygame.mixer.music.load('assets/music/Zander Noriega - Darker Waves_0_looping.wav')
@@ -163,6 +170,41 @@ class MathLevel(Level):
         if self.accept_input:
             self.player_sprite.on_event(event)
 
+    def on_update(self):
+        # Draw player
+        self.player_sprite.update(self.game.time_passed)
+
+        # Update and redraw all creeps
+        for enemy in self.enemies:
+            enemy.update(self.game.time_passed)
+            if pygame.sprite.collide_mask(enemy, self.player_sprite) and enemy.alive:
+                self.player_sprite.take_damage(enemy)
+                enemy.defeat(self.enemies)
+
+        if EnemySprite.is_all_defeated(self.enemies):
+            if self.player_sprite.alive:
+                self.player_sprite.score += self.stage_score_value
+                post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_level)
+            #self.player_sprite.win_scroll()
+
+        if self.player_sprite.death:
+            self.stop_game()
+
+    def blit(self):
+        # Redraw the background
+        self.game.display_tile_map(self.map)
+
+        # Update and redraw all creeps
+        for enemy in self.enemies:
+            enemy.blit()
+
+        self.player_sprite.blit()
+
+        if self.is_game_over:
+            text_size = self.game_over_font.size(GAME_OVER_TEXT)
+            label = outlined_text(self.game_over_font, GAME_OVER_TEXT, COLOR_WHITE, COLOR_ALMOST_BLACK)
+            self.game.screen.blit(label, (self.game.screen.get_size()[0] / 2 - text_size[0] / 2, self.game.screen.get_size()[1] / 2 - 90))
+
     def stop_game(self):
         self.accept_input = False
         self.result = []
@@ -179,36 +221,6 @@ class MathLevel(Level):
         pygame.mixer.music.load('assets/music/lose music 3 - 2.wav')
         pygame.mixer.music.play()
 
-    def on_update(self):
-        # Redraw the background
-        self.game.display_tile_map(self.map)
-
-        # Draw player
-        self.player_sprite.update(self.game.time_passed)
-        self.player_sprite.blit()
-
-        if self.is_game_over:
-            text_size = self.game_over_font.size(GAME_OVER_TEXT)
-            label = outlined_text(self.game_over_font, GAME_OVER_TEXT, COLOR_WHITE, COLOR_ALMOST_BLACK)
-            self.game.screen.blit(label, (self.game.screen.get_size()[0] / 2 - text_size[0] / 2, self.game.screen.get_size()[1] / 2 - 90))
-
-        # Update and redraw all creeps
-        for enemy in self.enemies:
-            if pygame.sprite.collide_mask(enemy, self.player_sprite) and enemy.alive:
-                self.player_sprite.take_damage(enemy)
-                enemy.defeat(self.enemies)
-            enemy.update(self.game.time_passed)
-            enemy.blitme()
-
-        if EnemySprite.is_all_defeated(self.enemies):
-            if self.player_sprite.alive:
-                self.player_sprite.score += self.stage_score_value
-                post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_level)
-            #self.player_sprite.win_scroll()
-
-        if self.player_sprite.death:
-            self.stop_game()
-
 
 class AdditionLevel(MathLevel):
     def __init__(self, player, **kwargs):
@@ -219,7 +231,7 @@ class AdditionLevel(MathLevel):
         self.stage_score_value = 100
         self.formula_function = lambda :'%d + %d' % (randint(0, 9), randint(0, 9))
         self.enemy_count = 8
-        self.enemy_speed = 0.005
+        self.enemy_speed = 0.1#005
         self.enemy_fps = 8
         self.enemy_score_value = 100
         self.enemy_attack_points = 5
@@ -235,7 +247,7 @@ class SubstractionLevel(MathLevel):
         self.stage_score_value = 150
         self.formula_function = lambda :'%d - %d' % (randint(0, 9), randint(0, 9))
         self.enemy_count = 6
-        self.enemy_speed = 0.01
+        self.enemy_speed = 0.1#01
         self.enemy_fps = 10
         self.enemy_score_value = 150
         self.enemy_attack_points = 10
@@ -251,7 +263,7 @@ class MultiplicationLevel(MathLevel):
         self.stage_score_value = 200
         self.formula_function = lambda :'%d * %d' % (randint(0, 9), randint(0, 9))
         self.enemy_count = 4
-        self.enemy_speed = 0.025
+        self.enemy_speed = 0.1#025
         self.enemy_fps = 12
         self.enemy_score_value = 200
         self.enemy_attack_points = 15

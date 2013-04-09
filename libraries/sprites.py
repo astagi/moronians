@@ -57,7 +57,7 @@ class PlayerSprite(pygame.sprite.Sprite):
         if event.type == pygame.KEYDOWN and not self.game.paused:
             if event.key == pygame.K_RETURN:
                 try:
-                    EnemySprite.player_shot(self, literal_eval(''.join(self.answer)), self.game.get_current_level().enemies)
+                    EnemySprite.player_shot(self, ''.join(self.answer), self.game.get_current_level().enemies)
                 except (SyntaxError, ValueError):
                     pass
                 self.answer = []
@@ -142,6 +142,7 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.alive = False
         self.death = True
         self.death_time = pygame.time.get_ticks()
+        self.answer = []
 
 
 class EnemySprite(pygame.sprite.Sprite):
@@ -162,7 +163,7 @@ class EnemySprite(pygame.sprite.Sprite):
     @staticmethod
     def player_shot(player, value, enemies):
         for enemy in enemies:
-            if enemy.result == value:
+            if enemy.result == literal_eval(value):
                 player.score += enemy.prize_value
                 enemy.defeat(enemies)
 
@@ -201,11 +202,11 @@ class EnemySprite(pygame.sprite.Sprite):
 
         self.death_sound = pygame.mixer.Sound('assets/sounds/8bit_bomb_explosion.wav')
 
-        # Call update to set our first image.
-        self.update(pygame.time.get_ticks(), force=True)
-
         # Calculate initial direction
         self.direction = (vec2d(self.game.screen.get_size()[0] / 2,self.game.screen.get_size()[1] / 2) - vec2d(init_position)).normalized()
+
+        # Call update to set our first image.
+        self.update(pygame.time.get_ticks(), force=True)
 
     def update(self, time_passed, force=False):
         # Re calculate direction to follow player
@@ -234,7 +235,7 @@ class EnemySprite(pygame.sprite.Sprite):
                 self.pos += displacement
                 self.rect.topleft = [self.pos.x, self.pos.y]
 
-    def blitme(self):
+    def blit(self):
         self.game.screen.blit(self.image, (self.pos.x, self.pos.y))
         if self.alive:
             # If enemy is alive show it's formula

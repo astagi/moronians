@@ -59,7 +59,6 @@ class Game(object):
         return self.modes[self._current_level]
 
     def on_event(self, event):
-        print event
         if event.type == pygame.QUIT:
             self.exit_game()
         elif event.type == pygame.KEYDOWN:
@@ -79,7 +78,7 @@ class Game(object):
 
         result = check_event(event)
         if result:
-            print 'MORONIAN EVENT', result
+            #print 'MORONIAN EVENT', result
             if result['event'] == EVENT_CHANGE_LEVEL:
                 self._current_level = result['mode']
                 self.modes[self._current_level].on_start()
@@ -101,12 +100,16 @@ class Game(object):
                         self.modes[self._current_level].on_event(event)
 
             self.on_loop()
+            self.on_blit()
             self.on_render()
 
         self.on_cleanup()
 
     def on_loop(self):
         self.modes[self._current_level].on_update()
+
+    def on_blit(self):
+        self.modes[self._current_level].blit()
 
         if self.paused:
             self.display_pause_label(self.pause_font)
