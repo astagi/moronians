@@ -38,6 +38,7 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.score = 0
         self.die_sound = pygame.mixer.Sound('assets/players/falldown.wav')
         self.sex = sex
+        self.speed = 0.05
 
         self.reset()
 
@@ -75,10 +76,62 @@ class PlayerSprite(pygame.sprite.Sprite):
             elif event.key <= 127 and event.key >= 32:
                 self.answer.append(chr(event.key))
 
+            #if event.key == pygame.K_LEFT:
+            #    sprite=pygame.image.load('left.png')
+            #elif event.key == K_RIGHT:
+            #    sprite=pygame.image.load('right.png')
+            #elif event.key == K_UP:
+            #    sprite=pygame.image.load('up.png')
+            #elif event.key == K_DOWN:
+            #    sprite=pygame.image.load('down.png')
+
     def update(self, time_passed):
+        keys_pressed = pygame.key.get_pressed()
+
+        direction_y = 0
+        direction_x = 0
+
+        if keys_pressed[pygame.K_LEFT]:
+            direction_x = -1
+
+        if keys_pressed[pygame.K_RIGHT]:
+            direction_x = 1
+
+        if keys_pressed[pygame.K_UP]:
+            direction_y = -1
+
+        if keys_pressed[pygame.K_DOWN]:
+            direction_y = 1
+
         #if not wait(2000).next():
         #    print 'asd'
         #    #self.die_sound.play()
+
+       # Re calculate direction to follow player
+        self.direction = vec2d(direction_x ,direction_y).normalized()
+
+        if not self.game.paused:
+            #t = pygame.time.get_ticks()
+            #if t - self._last_update > self._delay or force:
+            #    self._frame += 1
+            #    if self._frame >= len(self._images):
+            #        if self.loop:
+            #            self._frame = 0
+            #        else:
+            #            self._frame -= 1
+            #            self.enemies.remove(self)
+
+            #    self.image = self._images[self._frame]
+            #    self._last_update = t
+
+            if self.alive:
+                displacement = vec2d(
+                    self.direction.x * self.speed * time_passed,
+                    self.direction.y * self.speed * time_passed
+                )
+
+                self.pos += displacement
+                self.rect.topleft = [self.pos.x, self.pos.y]
 
         if self.has_scroll:
             if not self.scroll_position[1] < self.scroll_original_position[1] - 40:
@@ -175,15 +228,10 @@ class EnemySprite(pygame.sprite.Sprite):
 
     @staticmethod
     def player_shot(player, answer, enemies):
-        try:
-            evaluated_answer = literal_eval(answer)
-        except (SyntaxError, ValueError):
-            pass
-        else:
-            for enemy in enemies:
-                if enemy.answer == evaluated_answer:
-                    player.score += enemy.prize_value
-                    enemy.defeat(enemies)
+        for enemy in enemies:
+            if enemy.answer == answer:
+                player.score += enemy.prize_value
+                enemy.defeat(enemies)
 
     def __init__(self, game, font, question, answer, init_position, speed, images, fps, value, attack_points):
         pygame.sprite.Sprite.__init__(self)
@@ -256,7 +304,7 @@ class EnemySprite(pygame.sprite.Sprite):
     def blit(self):
         self.game.screen.blit(self.image, (self.pos.x, self.pos.y))
         if self.alive:
-            # If enemy is alive show it's formula
+            # If enemy is alive show it's question
             text_size = self.font.size(self.question)
             label = outlined_text(self.font, self.question, COLOR_WHITE, COLOR_ALMOST_BLACK)
 

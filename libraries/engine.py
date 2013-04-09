@@ -62,7 +62,7 @@ class Game(object):
             # Check for control keys first
             if event.key == pygame.K_ESCAPE:
                 self.exit_game()
-            elif (event.key == 112 or event.key == 80) and self.can_be_paused:  # lower & upper case p key
+            elif event.key == pygame.K_PAUSE and self.can_be_paused:
                 # Get next event, thus emulate swallowing this one
                 self.paused = not self.paused
                 if self.paused:

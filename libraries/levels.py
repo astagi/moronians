@@ -232,6 +232,25 @@ class PlayLevel(Level):
         pygame.mixer.music.play()
 
 
+word_list_spanish_english = [
+#    (chr(32), 'airplane'),
+    ('avion', 'airplane'),
+    ('rojo', 'red'),
+    ('azul', 'blue'),
+    ('ayer', 'yesterday'),
+    ('jugar', 'play'),
+    ('foto', 'photo'),
+    ('padre', 'father'),
+    ('madre', 'mother'),
+    ('abuelo', 'grandfather'),
+    ('abuela', 'grandmother'),
+]
+
+
+def pair_generator(word_list):
+    return choice(word_list)
+
+
 OPERATOR_ADD = 1
 OPERATOR_SUB = 2
 OPERATOR_MUL = 3
@@ -267,13 +286,13 @@ def formula_generator(operation, digits_1=1, digits_2=1, range_1=None, range_2=N
         return formula_generator(operation, digits_1, digits_2, range_1, range_2, even_1, even_2, big_endian)
 
     if operation == OPERATOR_ADD:
-        return '%d + %d' % (first_number, second_number), first_number + second_number
+        return '%d + %d' % (first_number, second_number), str(first_number + second_number)
     elif operation == OPERATOR_SUB:
-        return '%d - %d' % (first_number, second_number), first_number - second_number
+        return '%d - %d' % (first_number, second_number), str(first_number - second_number)
     elif operation == OPERATOR_MUL:
-        return '%d * %d' % (first_number, second_number), first_number * second_number
+        return '%d * %d' % (first_number, second_number), str(first_number * second_number)
     elif operation == OPERATOR_DIV:
-        return '%d / %d' % (first_number, second_number), first_number / second_number
+        return '%d / %d' % (first_number, second_number), str(first_number / second_number)
 
 
 class AdditionLevel(PlayLevel):
