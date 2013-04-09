@@ -12,6 +12,18 @@ from .utils import outlined_text
 from .vec2d import vec2d
 
 
+#class Timer(object):
+#   self._registry = {}#
+
+#    def __init__(self, interval):
+#        self.actual = pygame.time.get_ticks()
+#        self.interval = interval
+#
+#        self.__class__._registry[id(self)] = self
+#
+#    def
+
+
 class PlayerSprite(pygame.sprite.Sprite):
     def __init__(self, game, sex=SEX_MALE):
         pygame.sprite.Sprite.__init__(self)
@@ -56,10 +68,7 @@ class PlayerSprite(pygame.sprite.Sprite):
     def on_event(self, event):
         if event.type == pygame.KEYDOWN and not self.game.paused:
             if event.key == pygame.K_RETURN:
-                try:
-                    EnemySprite.player_shot(self, ''.join(self.answer), self.game.get_current_level().enemies)
-                except (SyntaxError, ValueError):
-                    pass
+                EnemySprite.player_shot(self, ''.join(self.answer), self.game.get_current_level().enemies)
                 self.answer = []
             elif event.key == pygame.K_BACKSPACE:
                 self.answer = self.answer[0:-1]
@@ -67,6 +76,10 @@ class PlayerSprite(pygame.sprite.Sprite):
                 self.answer.append(chr(event.key))
 
     def update(self, time_passed):
+        #if not wait(2000).next():
+        #    print 'asd'
+        #    #self.die_sound.play()
+
         if self.has_scroll:
             if not self.scroll_position[1] < self.scroll_original_position[1] - 40:
                 displacement = vec2d(
@@ -161,13 +174,18 @@ class EnemySprite(pygame.sprite.Sprite):
         return enemies == []
 
     @staticmethod
-    def player_shot(player, value, enemies):
-        for enemy in enemies:
-            if enemy.result == literal_eval(value):
-                player.score += enemy.prize_value
-                enemy.defeat(enemies)
+    def player_shot(player, answer, enemies):
+        try:
+            evaluated_answer = literal_eval(answer)
+        except (SyntaxError, ValueError):
+            pass
+        else:
+            for enemy in enemies:
+                if enemy.answer == evaluated_answer:
+                    player.score += enemy.prize_value
+                    enemy.defeat(enemies)
 
-    def __init__(self, game, font, text, init_position, speed, images, fps, value, attack_points):
+    def __init__(self, game, font, question, answer, init_position, speed, images, fps, value, attack_points):
         pygame.sprite.Sprite.__init__(self)
         self._images = images
         self.speed = speed
@@ -176,8 +194,8 @@ class EnemySprite(pygame.sprite.Sprite):
         self._last_update = 0
         self._frame = 0
         self.font = font
-        self.text = text
-        self.result = eval(text)
+        self.question = question
+        self.answer = answer
         self.rect = self._images[0].get_rect()
         self.size = self._images[0].get_size()
         self.game = game
@@ -239,8 +257,8 @@ class EnemySprite(pygame.sprite.Sprite):
         self.game.screen.blit(self.image, (self.pos.x, self.pos.y))
         if self.alive:
             # If enemy is alive show it's formula
-            text_size = self.font.size(self.text)
-            label = outlined_text(self.font, self.text, COLOR_WHITE, COLOR_ALMOST_BLACK)
+            text_size = self.font.size(self.question)
+            label = outlined_text(self.font, self.question, COLOR_WHITE, COLOR_ALMOST_BLACK)
 
             self.game.screen.blit(label, (self.pos.x + self.size[0] / 2 - text_size[0] / 2, self.pos.y - 11))
 

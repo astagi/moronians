@@ -8,8 +8,7 @@ import sys
 import pygame
 
 from .exceptions import SwallowEvent
-from .events import (EVENT_GAME_OVER, EVENT_JUMP_TO_TITLE,
-    EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, EVENT_STORY_SCRIPT_CAPTION,
+from .events import (EVENT_GAME_OVER, EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, EVENT_STORY_SCRIPT_CAPTION,
     EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
     EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, EVENT_CHANGE_LEVEL)
 from .levels import (TitleScreen, StoryLevel, AdditionLevel, SubstractionLevel,
@@ -25,7 +24,6 @@ from .vec2d import vec2d
 logger = logging.getLogger(__name__)
 
 
-
 class Game(object):
     def __init__(self):
         self.paused = False
@@ -35,8 +33,7 @@ class Game(object):
     def on_init(self):
         pygame.init()
         self.clock = pygame.time.Clock()
-        #self.screen = pygame.display.set_mode(DEFAULT_SCREENSIZE)#, 0, 32)
-        self.screen = pygame.display.set_mode(DEFAULT_SCREENSIZE, pygame.HWSURFACE | pygame.DOUBLEBUF)
+        self.screen = pygame.display.set_mode(DEFAULT_SCREENSIZE, pygame.HWSURFACE | pygame.DOUBLEBUF)# | pygame.FULLSCREEN)
         self.running = True
         self.pause_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 15)
         self.enemy_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
@@ -63,7 +60,7 @@ class Game(object):
             self.exit_game()
         elif event.type == pygame.KEYDOWN:
             # Check for control keys first
-            if event.key == 113 or event.key == 81:  # lower & upper case q key
+            if event.key == pygame.K_ESCAPE:
                 self.exit_game()
             elif (event.key == 112 or event.key == 80) and self.can_be_paused:  # lower & upper case p key
                 # Get next event, thus emulate swallowing this one
@@ -103,8 +100,6 @@ class Game(object):
             self.on_blit()
             self.on_render()
 
-        self.on_cleanup()
-
     def on_loop(self):
         self.modes[self._current_level].on_update()
 
@@ -136,4 +131,5 @@ class Game(object):
                 self.screen.blit(map.tileset, location, map.grid[y][x])
 
     def exit_game(self):
-        pygame.quit()
+        self.running = False
+        pygame.display.set_mode(DEFAULT_SCREENSIZE, pygame.HWSURFACE | pygame.DOUBLEBUF)
