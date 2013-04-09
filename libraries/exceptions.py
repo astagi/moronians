@@ -1,2 +1,2 @@
-class NotAMoronianEvent(Exception):
+class SwallowEvent(Exception):
     pass

@@ -3,7 +3,6 @@ from __future__ import absolute_import
 import pygame
 
 from .events import MORONIAN_CUSTOM_EVENT
-from .exceptions import NotAMoronianEvent
 
 
 def aspect_scale(img,(bx,by)):
@@ -69,5 +68,3 @@ def post_event(event, **kwargs):
 def check_event(event):
     if event.type == MORONIAN_CUSTOM_EVENT:
         return event.dict
-    else:
-        raise NotAMoronianEvent

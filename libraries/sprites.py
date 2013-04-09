@@ -1,10 +1,11 @@
 from __future__ import absolute_import
 
+from ast import literal_eval
 import os
 
 import pygame
 
-from .events import EVENT_STOP_GAME, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH
+from .events import EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     HEALTH_BAR_TEXT, SCORE_TEXT, SEX_MALE)
 from .utils import outlined_text
@@ -48,7 +49,22 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.death_roll = False
         self.health = self.total_health
         self.has_scroll = False
+        self.score = 0
         self.set_image()
+        self.answer = []
+
+    def on_event(self, event):
+        if event.type == pygame.KEYDOWN and not self.game.paused:
+            if event.key == pygame.K_RETURN:
+                try:
+                    EnemySprite.player_shot(self, literal_eval(''.join(self.answer)), self.game.get_current_level().enemies)
+                except (SyntaxError, ValueError):
+                    pass
+                self.answer = []
+            elif event.key == pygame.K_BACKSPACE:
+                self.answer = self.answer[0:-1]
+            elif event.key <= 127 and event.key >= 32:
+                self.answer.append(chr(event.key))
 
     def update(self, time_passed):
         if self.has_scroll:
@@ -94,13 +110,14 @@ class PlayerSprite(pygame.sprite.Sprite):
         if self.has_scroll:
             self.game.screen.blit(self.scroll, self.scroll_position)
 
-    def result(self, result):
-        if len(result) != 0:
+        # Redraw the result box
+        if len(self.answer) != 0:
+            answer_string = ''.join(self.answer)
             thought_size = self.thought_image.get_size()
             self.game.screen.blit(self.thought_image, (self.pos[0] + thought_size[1] / 2, self.pos[1] - 20))
 
-            text_size = self.result_font.size(result)
-            label = outlined_text(self.result_font, result, COLOR_WHITE, COLOR_ALMOST_BLACK)
+            text_size = self.result_font.size(answer_string)
+            label = outlined_text(self.result_font, answer_string, COLOR_WHITE, COLOR_ALMOST_BLACK)
             self.game.screen.blit(label, (self.pos[0] + self.size[0] / 2 - text_size[0] / 2, self.pos[1] - 30))
 
     def win_scroll(self):
@@ -125,7 +142,6 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.alive = False
         self.death = True
         self.death_time = pygame.time.get_ticks()
-        pygame.event.post(pygame.event.Event(EVENT_STOP_GAME))
 
 
 class EnemySprite(pygame.sprite.Sprite):
@@ -185,13 +201,16 @@ class EnemySprite(pygame.sprite.Sprite):
 
         self.death_sound = pygame.mixer.Sound('assets/sounds/8bit_bomb_explosion.wav')
 
-        # Calculate direction to the center of the screen
-        self.direction = (vec2d(self.game.screen.get_size()[0] / 2,self.game.screen.get_size()[1] / 2) - vec2d(init_position)).normalized()
-
         # Call update to set our first image.
         self.update(pygame.time.get_ticks(), force=True)
 
+        # Calculate initial direction
+        self.direction = (vec2d(self.game.screen.get_size()[0] / 2,self.game.screen.get_size()[1] / 2) - vec2d(init_position)).normalized()
+
     def update(self, time_passed, force=False):
+        # Re calculate direction to follow player
+        self.direction = (self.game.player_sprite.pos - self.pos).normalized()
+
         if not self.game.paused:
             t = pygame.time.get_ticks()
             if t - self._last_update > self._delay or force:

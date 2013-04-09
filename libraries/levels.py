@@ -5,13 +5,15 @@ from random import randint, choice
 
 import pygame
 
-from .events import (EVENT_GAME_OVER, EVENT_JUMP_TO_TITLE, EVENT_STOP_GAME,
+from .events import (EVENT_GAME_OVER, EVENT_JUMP_TO_TITLE,
     EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, EVENT_STORY_SCRIPT_CAPTION,
     EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
-    EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, EVENT_CHANGE_MODE)
+    EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, EVENT_CHANGE_LEVEL)
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT, PAUSE_TEXT_VERTICAL_OFFSET,
-    START_MESSAGE_TEXT, STORY_TEXT, GAME_MODE_STORY, GAME_MODE_ADDITION_LEVEL)
+    START_MESSAGE_TEXT, STORY_TEXT, GAME_LEVEL_STORY, GAME_LEVEL_ADDITION_LEVEL,
+    GAME_LEVEL_SUBSTRACT_LEVEL, GAME_LEVEL_MULTIPLICATION_LEVEL, GAME_LEVEL_DIVISION_LEVEL,
+    GAME_LEVEL_TITLE)
 from .maps import Map1, Map2, Map3, Map4
 from .sprites import EnemySprite, PlayerSprite, SpaceshipSprite
 from .utils import check_event, hollow_text, outlined_text, post_event
@@ -48,6 +50,7 @@ class TitleScreen(Level):
     def on_start(self):
         pygame.mixer.music.load('assets/music/OveMelaaTranceBitBit.ogg')
         pygame.mixer.music.play(-1)
+        self.game.player_sprite.reset()
 
     def on_update(self):
         # Redraw the background
@@ -66,7 +69,7 @@ class TitleScreen(Level):
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN:
-                post_event(event=EVENT_CHANGE_MODE, mode=GAME_MODE_STORY)
+                post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_STORY)
 
     def on_exit(self):
         pygame.mixer.music.stop()
@@ -109,7 +112,8 @@ class StoryLevel(Level):
 
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
-            post_event(event=EVENT_CHANGE_MODE, mode=GAME_MODE_ADDITION_LEVEL)
+            pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 0)
+            post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_ADDITION_LEVEL)
         elif event.type == EVENT_STORY_SCRIPT_CAPTION:
             pygame.time.set_timer(EVENT_STORY_SCRIPT_CAPTION, 0)
             pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 150)
@@ -125,7 +129,7 @@ class StoryLevel(Level):
             pygame.time.set_timer(EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, 4000)
         elif event.type == EVENT_STORY_SCRIPT_POST_LAUGH_DELAY:
             pygame.time.set_timer(EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, 0)
-            post_event(event=EVENT_CHANGE_MODE, mode=GAME_MODE_ADDITION_LEVEL)
+            post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_ADDITION_LEVEL)
 
 
 class MathLevel(Level):
@@ -148,22 +152,16 @@ class MathLevel(Level):
             origin_point = (randint(0, screen_size[0]), randint(0, screen_size[1]))
             self.enemies.append(EnemySprite(self.game, self.game.enemy_font, self.formula_function(), origin_point, self.enemy_speed, self.enemy_images, self.enemy_fps, self.enemy_score_value, self.enemy_attack_points))
 
+        self.game.can_be_paused = True
+
     def on_event(self, event):
-        if event.type == pygame.KEYDOWN and not self.game.paused and self.accept_input:
-            if event.key == pygame.K_RETURN:
-                try:
-                    EnemySprite.player_shot(self.player_sprite, literal_eval(''.join(self.result)), self.enemies)
-                except (SyntaxError, ValueError):
-                    pass
-                self.result = []
-            elif event.key == pygame.K_BACKSPACE:
-                self.result = self.result[0:-1]
-            elif event.key <= 127 and event.key >= 32:
-                self.result.append(chr(event.key))
-        if event.type == EVENT_STOP_GAME:
-            self.stop_game()
+        if event.type == pygame.KEYDOWN and self.is_game_over:
+            post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_TITLE)
         elif event.type == EVENT_GAME_OVER:
             self.game_over()
+
+        if self.accept_input:
+            self.player_sprite.on_event(event)
 
     def stop_game(self):
         self.accept_input = False
@@ -180,7 +178,6 @@ class MathLevel(Level):
         pygame.time.set_timer(EVENT_GAME_OVER, 0)
         pygame.mixer.music.load('assets/music/lose music 3 - 2.wav')
         pygame.mixer.music.play()
-        pygame.time.set_timer(EVENT_JUMP_TO_TITLE, 3000)
 
     def on_update(self):
         # Redraw the background
@@ -203,14 +200,14 @@ class MathLevel(Level):
             enemy.update(self.game.time_passed)
             enemy.blitme()
 
-        # Redraw the result box
-        self.player_sprite.result(''.join(self.result))
-
         if EnemySprite.is_all_defeated(self.enemies):
             if self.player_sprite.alive:
                 self.player_sprite.score += self.stage_score_value
-                raise LevelComplete
+                post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_level)
             #self.player_sprite.win_scroll()
+
+        if self.player_sprite.death:
+            self.stop_game()
 
 
 class AdditionLevel(MathLevel):
@@ -222,10 +219,59 @@ class AdditionLevel(MathLevel):
         self.stage_score_value = 100
         self.formula_function = lambda :'%d + %d' % (randint(0, 9), randint(0, 9))
         self.enemy_count = 8
-        self.enemy_speed = 0.05#025
+        self.enemy_speed = 0.005
         self.enemy_fps = 8
         self.enemy_score_value = 100
-        self.enemy_attack_points = 50
+        self.enemy_attack_points = 5
+        self.next_level = GAME_LEVEL_SUBSTRACT_LEVEL
+
+
+class SubstractionLevel(MathLevel):
+    def __init__(self, player, **kwargs):
+        super(self.__class__, self).__init__(**kwargs)
+        self.map = Map2()
+        self.player_sprite = player
+        self.enemy_images = EnemySprite.load_sliced_sprites(32, 32, 'enemies/redslime_strip.png')
+        self.stage_score_value = 150
+        self.formula_function = lambda :'%d - %d' % (randint(0, 9), randint(0, 9))
+        self.enemy_count = 6
+        self.enemy_speed = 0.01
+        self.enemy_fps = 10
+        self.enemy_score_value = 150
+        self.enemy_attack_points = 10
+        self.next_level = GAME_LEVEL_MULTIPLICATION_LEVEL
+
+
+class MultiplicationLevel(MathLevel):
+    def __init__(self, player, **kwargs):
+        super(self.__class__, self).__init__(**kwargs)
+        self.map = Map3()
+        self.player_sprite = player
+        self.enemy_images = EnemySprite.load_sliced_sprites(32, 32, 'enemies/aracnid_strip.png')
+        self.stage_score_value = 200
+        self.formula_function = lambda :'%d * %d' % (randint(0, 9), randint(0, 9))
+        self.enemy_count = 4
+        self.enemy_speed = 0.025
+        self.enemy_fps = 12
+        self.enemy_score_value = 200
+        self.enemy_attack_points = 15
+        self.next_level = GAME_LEVEL_DIVISION_LEVEL
+
+
+class DivisionLevel(MathLevel):
+    def __init__(self, player, **kwargs):
+        super(self.__class__, self).__init__(**kwargs)
+        self.map = Map4()
+        self.player_sprite = player
+        self.enemy_images = EnemySprite.load_sliced_sprites(32, 32, 'enemies/flying_bot_strip.png')
+        self.stage_score_value = 200
+        self.formula_function = lambda :'%d / %d' % (randint(0, 9), randint(1, 9))
+        self.enemy_count = 2
+        self.enemy_speed = 0.1
+        self.enemy_fps = 14
+        self.enemy_score_value = 300
+        self.enemy_attack_points = 20
+        self.next_level = GAME_LEVEL_TITLE
 
 
 class IntermissionLevel(Level):
