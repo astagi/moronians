@@ -107,21 +107,6 @@ class StoryLevel(Level):
     def on_update(self):
         self.bio_ship.update(self.game.time_passed)
 
-    def blit(self):
-        self.game.screen.blit(self.title_image, (0, 0))
-
-        text_size = self.font.size(STORY_TEXT[0: self.caption_letter])
-        label = self.font.render(STORY_TEXT[0: self.caption_letter], 1, COLOR_WHITE)
-        self.game.screen.blit(label, (self.game.screen.get_size()[0] / 2 - text_size[0] / 2, self.game.screen.get_size()[1] - 60))
-
-        self.bio_ship.blit()
-
-    def type_caption_letter(self):
-        self.caption_letter += 1
-        if self.caption_letter > len(STORY_TEXT):
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 0)
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, 2000)
-
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
             pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 0)
@@ -142,6 +127,21 @@ class StoryLevel(Level):
         elif event.type == EVENT_STORY_SCRIPT_POST_LAUGH_DELAY:
             pygame.time.set_timer(EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, 0)
             post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_ADDITION_LEVEL)
+
+    def blit(self):
+        self.game.screen.blit(self.title_image, (0, 0))
+
+        text_size = self.font.size(STORY_TEXT[0: self.caption_letter])
+        label = self.font.render(STORY_TEXT[0: self.caption_letter], 1, COLOR_WHITE)
+        self.game.screen.blit(label, (self.game.screen.get_size()[0] / 2 - text_size[0] / 2, self.game.screen.get_size()[1] - 60))
+
+        self.bio_ship.blit()
+
+    def type_caption_letter(self):
+        self.caption_letter += 1
+        if self.caption_letter > len(STORY_TEXT):
+            pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 0)
+            pygame.time.set_timer(EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, 2000)
 
 
 class PlayLevel(Level):
@@ -266,6 +266,7 @@ OPERATOR_ADD = 1
 OPERATOR_SUB = 2
 OPERATOR_MUL = 3
 OPERATOR_DIV = 4
+
 
 def formula_generator(operation, digits_1=1, digits_2=1, range_1=None, range_2=None, even_1=False, even_2=False, big_endian=False):
     if range_1:

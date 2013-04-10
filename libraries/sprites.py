@@ -103,11 +103,11 @@ class PlayerSprite(CustomSprite):
 
     def on_event(self, event):
         if event.type == pygame.KEYDOWN and not self.game.paused:
-            if event.key == pygame.K_RETURN:
+            if event.key == pygame.K_RETURN and self.answer:
                 EnemySprite.player_shot(self, ''.join(self.answer), self.game.get_current_level().enemies)
                 self.answer = []
             elif event.key == pygame.K_BACKSPACE:
-                self.answer = self.answer[0:-1]
+                self.answer = self.answer[0: -1]
             elif event.key <= 127 and event.key >= 32:
                 self.answer.append(chr(event.key))
 
@@ -142,8 +142,7 @@ class PlayerSprite(CustomSprite):
         #    print 'asd'
         #    #self.die_sound.play()
 
-       # Re calculate direction to follow player
-        self.direction = vec2d(direction_x ,direction_y).normalized()
+        self.direction = vec2d(direction_x, direction_y).normalized()
 
         if not self.game.paused:
             if direction_x != 0 or direction_y != 0:
@@ -413,10 +412,10 @@ class SpaceshipSprite(pygame.sprite.Sprite):
         if self.tractor_beam_active:
             self.show_tractor_beam = not self.show_tractor_beam
 
+    def blit(self):
         if self.show_tractor_beam:
             self.game.screen.blit(self.tractor_beam_image, (self.pos[0] + 18, self.pos[1] + 25))
 
-    def blit(self):
         if self.book_active:
             self.game.screen.blit(self.book_image, self.book_position)
 
