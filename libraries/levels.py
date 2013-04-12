@@ -40,7 +40,7 @@ class TitleScreen(Level):
     def __init__(self, game):
         self.game = game
         image = pygame.image.load('assets/backgrounds/game_title.png').convert()
-        self.title_image = background = pygame.transform.scale(image, (self.game.screen.get_size()[0], self.game.screen.get_size()[1]))
+        self.title_image = background = pygame.transform.scale(image, (self.game.surface.get_size()[0], self.game.surface.get_size()[1]))
         self.show_start_message = True
         self.font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 24)
         self.credit_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 9)
@@ -61,20 +61,20 @@ class TitleScreen(Level):
 
     def blit(self):
         # Redraw the background
-        self.game.screen.blit(self.title_image, (0, 0))
+        self.game.surface.blit(self.title_image, (0, 0))
 
         if self.show_start_message:
             text_size = self.font.size(START_MESSAGE_TEXT)
             label = self.font.render(START_MESSAGE_TEXT, 1, COLOR_WHITE)
-            self.game.screen.blit(label, (self.game.screen.get_size()[0] / 2 - text_size[0] / 2, self.game.screen.get_size()[1] - 60))
+            self.game.surface.blit(label, (self.game.surface.get_size()[0] / 2 - text_size[0] / 2, self.game.surface.get_size()[1] - 60))
 
         text_size = self.credit_font.size(CREDITS_TEXT)
         label = self.credit_font.render(CREDITS_TEXT, 1, COLOR_WHITE)
-        self.game.screen.blit(label, (self.game.screen.get_size()[0] / 2 - text_size[0] / 2, self.game.screen.get_size()[1] - 20))
+        self.game.surface.blit(label, (self.game.surface.get_size()[0] / 2 - text_size[0] / 2, self.game.surface.get_size()[1] - 20))
 
         text_size = self.credit_font.size(get_version())
         label = self.credit_font.render(get_version(), 1, COLOR_WHITE)
-        self.game.screen.blit(label, (self.game.screen.get_size()[0] - text_size[0] - 8, self.game.screen.get_size()[1] - 20))
+        self.game.surface.blit(label, (self.game.surface.get_size()[0] - text_size[0] - 8, self.game.surface.get_size()[1] - 20))
 
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -92,9 +92,9 @@ class StoryLevel(Level):
 
         self.bio_ship_image = pygame.image.load('assets/enemies/bio_ship.png').convert()
         self.bio_ship = SpaceshipSprite(self.game, image=self.bio_ship_image, speed=0.04)
-        screen_size = self.game.screen.get_size()
+        screen_size = self.game.surface.get_size()
         image = pygame.image.load('assets/backgrounds/earth.png').convert()
-        self.title_image = background = pygame.transform.scale(image, (self.game.screen.get_size()[0], self.game.screen.get_size()[1]))
+        self.title_image = background = pygame.transform.scale(image, (self.game.surface.get_size()[0], self.game.surface.get_size()[1]))
 
         self.font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 15)
         self.laugh_sound = pygame.mixer.Sound('assets/sounds/evil-laughter-witch.ogg')
@@ -129,11 +129,11 @@ class StoryLevel(Level):
             post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_ADDITION_LEVEL)
 
     def blit(self):
-        self.game.screen.blit(self.title_image, (0, 0))
+        self.game.surface.blit(self.title_image, (0, 0))
 
         text_size = self.font.size(STORY_TEXT[0: self.caption_letter])
         label = self.font.render(STORY_TEXT[0: self.caption_letter], 1, COLOR_WHITE)
-        self.game.screen.blit(label, (self.game.screen.get_size()[0] / 2 - text_size[0] / 2, self.game.screen.get_size()[1] - 60))
+        self.game.surface.blit(label, (self.game.surface.get_size()[0] / 2 - text_size[0] / 2, self.game.surface.get_size()[1] - 60))
 
         self.bio_ship.blit()
 
@@ -165,7 +165,7 @@ class PlayLevel(Level):
         self.is_game_over = False
 
         self.enemies = []
-        screen_size = self.game.screen.get_size()
+        screen_size = self.game.surface.get_size()
         for i in range(self.enemy_count):
             origin_point = (randint(0, screen_size[0]), randint(0, screen_size[1]))
             question, answer = self.question_function()
@@ -224,7 +224,7 @@ class PlayLevel(Level):
         if self.is_game_over:
             text_size = self.game_over_font.size(GAME_OVER_TEXT)
             label = outlined_text(self.game_over_font, GAME_OVER_TEXT, COLOR_WHITE, COLOR_ALMOST_BLACK)
-            self.game.screen.blit(label, (self.game.screen.get_size()[0] / 2 - text_size[0] / 2, self.game.screen.get_size()[1] / 2 - 90))
+            self.game.surface.blit(label, (self.game.surface.get_size()[0] / 2 - text_size[0] / 2, self.game.surface.get_size()[1] / 2 - 90))
 
     def stop_game(self):
         self.accept_input = False
@@ -362,7 +362,7 @@ class DivisionLevel(PlayLevel):
         self.player_sprite = player
         self.enemy_images = EnemySprite.load_sliced_sprites(32, 32, 'enemies/flying_bot_strip.png')
         self.stage_score_value = 200
-        self.question_function = lambda: formula_generator(OPERATOR_DIV, digits_1=1, range_2=(0,2), even_1=True, even_2=True, big_endian=True)
+        self.question_function = lambda: formula_generator(OPERATOR_DIV, digits_1=1, range_2=(1,2), even_1=True, even_2=True, big_endian=True)
         self.enemy_count = 2
         self.enemy_speed = 0.05
         self.enemy_fps = 14
@@ -375,9 +375,9 @@ class IntermissionLevel(Level):
     def setup(self):
         self.bio_ship_image = pygame.image.load('assets/enemies/bio_ship.png').convert()
         self.bio_ship = SpaceshipSprite(self.game, image=self.bio_ship_image, speed=0.04)
-        screen_size = self.game.screen.get_size()
+        screen_size = self.game.surface.get_size()
         image = pygame.image.load('assets/backgrounds/earth.png').convert()
-        self.title_image = background = pygame.transform.scale(image, (self.game.screen.get_size()[0], self.game.screen.get_size()[1]))
+        self.title_image = background = pygame.transform.scale(image, (self.game.surface.get_size()[0], self.game.surface.get_size()[1]))
         self.font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 15)
         self.caption_letter = 0
         self.laugh_sound = pygame.mixer.Sound('assets/sounds/evil-laughter-witch.ogg')
@@ -388,11 +388,11 @@ class IntermissionLevel(Level):
         pygame.time.set_timer(EVENT_STORY_SCRIPT_CAPTION, 2000)
 
     def update(self):
-        self.game.screen.blit(self.title_image, (0, 0))
+        self.game.surface.blit(self.title_image, (0, 0))
 
         text_size = self.font.size(STORY_TEXT[0: self.caption_letter])
         label = self.font.render(STORY_TEXT[0: self.caption_letter], 1, COLOR_WHITE)
-        self.game.screen.blit(label, (self.game.screen.get_size()[0] / 2 - text_size[0] / 2, self.game.screen.get_size()[1] - 60))
+        self.game.surface.blit(label, (self.game.surface.get_size()[0] / 2 - text_size[0] / 2, self.game.surface.get_size()[1] - 60))
 
         self.bio_ship.update(self.game.time_passed)
         self.bio_ship.blit()

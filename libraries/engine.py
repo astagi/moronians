@@ -33,7 +33,8 @@ class Game(object):
     def on_init(self):
         pygame.init()
         self.clock = pygame.time.Clock()
-        self.screen = pygame.display.set_mode(DEFAULT_SCREENSIZE, pygame.HWSURFACE | pygame.DOUBLEBUF)# | pygame.FULLSCREEN)
+        self._screen = pygame.display.set_mode(DEFAULT_SCREENSIZE, pygame.HWSURFACE | pygame.DOUBLEBUF)# | pygame.FULLSCREEN)
+        self.surface = pygame.Surface(self._screen.get_size())
         self.running = True
         self.pause_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 15)
         self.enemy_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
@@ -105,9 +106,10 @@ class Game(object):
 
     def on_blit(self):
         self.modes[self._current_level].blit()
-
         if self.paused:
             self.display_pause_label(self.pause_font)
+
+        self._screen.blit(self.surface, (0, 0))
 
     def on_render(self):
         pygame.display.flip()
@@ -117,18 +119,18 @@ class Game(object):
         if len(message) != 0:
             pygame.draw.rect(self.screen, COLOR_BLACK, (position[0] + BORDER_SIZE, position[1] + BORDER_SIZE, size[0] - BORDER_SIZE, size[1] - BORDER_SIZE), 0)
             pygame.draw.rect(self.screen, COLOR_WHITE, (position[0], position[1], size[0], size[1]), 1)
-            self.screen.blit(font.render(message, 1, COLOR_WHITE), (position[0] + BORDER_SIZE, position[1] + BORDER_SIZE))
+            self.surface.blit(font.render(message, 1, COLOR_WHITE), (position[0] + BORDER_SIZE, position[1] + BORDER_SIZE))
 
     def display_pause_label(self, font):
         text_size = font.size(PAUSE_TEXT)
-        self.screen.blit(font.render(PAUSE_TEXT, 1, COLOR_WHITE), (self.screen.get_width() / 2 - text_size[0] / 2, self.screen.get_height() / 2 - text_size[1] / 2 - PAUSE_TEXT_VERTICAL_OFFSET))
+        self.surface.blit(font.render(PAUSE_TEXT, 1, COLOR_WHITE), (self.screen.get_width() / 2 - text_size[0] / 2, self.screen.get_height() / 2 - text_size[1] / 2 - PAUSE_TEXT_VERTICAL_OFFSET))
 
     def display_tile_map(self, map):
         #loops through map to set background
         for y in range(len(map.grid)):
             for x in range(len(map.grid[y])):
                 location = (x * 32, y * 32)
-                self.screen.blit(map.tileset, location, map.grid[y][x])
+                self.surface.blit(map.tileset, location, map.grid[y][x])
 
     def exit_game(self):
         self.running = False

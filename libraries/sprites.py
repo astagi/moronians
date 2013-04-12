@@ -63,8 +63,8 @@ class PlayerSprite(CustomSprite):
         self.rect = self.image.get_rect()
         self.size = self.image.get_size()
         self.pos = (
-            self.game.screen.get_size()[0] / 2 - self.size[0] / 2,
-            self.game.screen.get_size()[1] / 2 - self.size[1] / 2
+            self.game.surface.get_size()[0] / 2 - self.size[0] / 2,
+            self.game.surface.get_size()[1] / 2 - self.size[1] / 2
         )
         self.rect.topleft = [self.pos[0], self.pos[1]]
         self._images = []
@@ -96,8 +96,8 @@ class PlayerSprite(CustomSprite):
 
     def reset_position(self):
         self.pos = (
-            self.game.screen.get_size()[0] / 2 - self.size[0] / 2,
-            self.game.screen.get_size()[1] / 2 - self.size[1] / 2
+            self.game.surface.get_size()[0] / 2 - self.size[0] / 2,
+            self.game.surface.get_size()[1] / 2 - self.size[1] / 2
         )
         self.rect.topleft = [self.pos[0], self.pos[1]]
 
@@ -189,34 +189,34 @@ class PlayerSprite(CustomSprite):
                 self.image = pygame.image.load('assets/players/boy_left_view_2.png').convert_alpha()
             else:
                 self.image = pygame.image.load('assets/players/girl_left_view_2.png').convert_alpha()
-            self.game.screen.blit(pygame.transform.rotozoom(self.image, 90, 1), self.pos)
+            self.game.surface.blit(pygame.transform.rotozoom(self.image, 90, 1), self.pos)
         else:
-            self.game.screen.blit(self.image, self.pos)
+            self.game.surface.blit(self.image, self.pos)
 
         # Blit health bar
         text_size = self.result_font.size(HEALTH_BAR_TEXT)
         label = outlined_text(self.result_font, HEALTH_BAR_TEXT, COLOR_WHITE, COLOR_ALMOST_BLACK)
-        self.game.screen.blit(label, (1, 1))
-        self.game.screen.blit(self.health_bar_image, (text_size[0] + 10, 1), area=pygame.Rect(0, 0, self.health_bar_image.get_size()[0] * self.health / float(self.total_health), self.health_bar_image.get_size()[1]))
+        self.game.surface.blit(label, (1, 1))
+        self.game.surface.blit(self.health_bar_image, (text_size[0] + 10, 1), area=pygame.Rect(0, 0, self.health_bar_image.get_size()[0] * self.health / float(self.total_health), self.health_bar_image.get_size()[1]))
 
         # Blit score
         score_text = '%s %d' % (SCORE_TEXT, self.score)
         text_size = self.result_font.size(score_text)
         label = outlined_text(self.result_font, score_text, COLOR_WHITE, COLOR_ALMOST_BLACK)
-        self.game.screen.blit(label, (self.game.screen.get_size()[0] - text_size[0] - 10, 1))
+        self.game.surface.blit(label, (self.game.surface.get_size()[0] - text_size[0] - 10, 1))
 
         if self.has_scroll:
-            self.game.screen.blit(self.scroll, self.scroll_position)
+            self.game.surface.blit(self.scroll, self.scroll_position)
 
         # Redraw the result box
         if len(self.answer) != 0:
             answer_string = ''.join(self.answer)
             thought_size = self.thought_image.get_size()
-            self.game.screen.blit(self.thought_image, (self.pos[0] + thought_size[1] / 2, self.pos[1] - 20))
+            self.game.surface.blit(self.thought_image, (self.pos[0] + thought_size[1] / 2, self.pos[1] - 20))
 
             text_size = self.result_font.size(answer_string)
             label = outlined_text(self.result_font, answer_string, COLOR_WHITE, COLOR_ALMOST_BLACK)
-            self.game.screen.blit(label, (self.pos[0] + self.size[0] / 2 - text_size[0] / 2, self.pos[1] - 30))
+            self.game.surface.blit(label, (self.pos[0] + self.size[0] / 2 - text_size[0] / 2, self.pos[1] - 30))
 
     def win_scroll(self):
         if not self.has_scroll and self.alive:
@@ -305,7 +305,7 @@ class EnemySprite(CustomSprite):
         self.death_sound = pygame.mixer.Sound('assets/sounds/8bit_bomb_explosion.wav')
 
         # Calculate initial direction
-        self.direction = (vec2d(self.game.screen.get_size()[0] / 2,self.game.screen.get_size()[1] / 2) - vec2d(init_position)).normalized()
+        self.direction = (vec2d(self.game.surface.get_size()[0] / 2,self.game.surface.get_size()[1] / 2) - vec2d(init_position)).normalized()
 
         # Call update to set our first image.
         self.update(pygame.time.get_ticks(), force=True)
@@ -338,13 +338,13 @@ class EnemySprite(CustomSprite):
                 self.rect.topleft = [self.pos.x, self.pos.y]
 
     def blit(self):
-        self.game.screen.blit(self.image, (self.pos.x, self.pos.y))
+        self.game.surface.blit(self.image, (self.pos.x, self.pos.y))
         if self.alive:
             # If enemy is alive show it's question
             text_size = self.font.size(self.question)
             label = outlined_text(self.font, self.question, COLOR_WHITE, COLOR_ALMOST_BLACK)
 
-            self.game.screen.blit(label, (self.pos.x + self.size[0] / 2 - text_size[0] / 2, self.pos.y - 11))
+            self.game.surface.blit(label, (self.pos.x + self.size[0] / 2 - text_size[0] / 2, self.pos.y - 11))
 
     def defeat(self, enemies):
         if self.alive:
@@ -363,10 +363,10 @@ class SpaceshipSprite(pygame.sprite.Sprite):
         self.game = game
         self.rect = self.image.get_rect()
         self.size = self.image.get_size()
-        self.pos = vec2d(self.game.screen.get_size()[0] / 2 - self.size[0] / 2, 0)
+        self.pos = vec2d(self.game.surface.get_size()[0] / 2 - self.size[0] / 2, 0)
         self._start = pygame.time.get_ticks()
         self._last_update = 0
-        self.direction = (vec2d(self.game.screen.get_size()[0] / 2, self.game.screen.get_size()[1] / 2) - vec2d(self.pos)).normalized()
+        self.direction = (vec2d(self.game.surface.get_size()[0] / 2, self.game.surface.get_size()[1] / 2) - vec2d(self.pos)).normalized()
 
         self.tractor_beam_image = pygame.image.load('assets/enemies/tractor_beam.png').convert()
 
@@ -389,7 +389,7 @@ class SpaceshipSprite(pygame.sprite.Sprite):
             elif self.tractor_beam_active == False:
                 self.tractor_beam_active = True
                 self.book_active = True
-                self.book_position = (self.game.screen.get_size()[0] / 2, self.game.screen.get_size()[1] / 2 - 40)
+                self.book_position = (self.game.surface.get_size()[0] / 2, self.game.surface.get_size()[1] / 2 - 40)
                 self.book_direction = (vec2d(self.pos[0], self.pos[1]) - vec2d(self.book_position)).normalized()
             if self.pos[1] < -69:
                 self.active = False
@@ -405,7 +405,7 @@ class SpaceshipSprite(pygame.sprite.Sprite):
                 self.tractor_beam_active = False
                 self.show_tractor_beam = False
                 self.book_active = False
-                self.direction = (vec2d(self.game.screen.get_size()[0] / 2, 0) - vec2d(self.pos)).normalized()
+                self.direction = (vec2d(self.game.surface.get_size()[0] / 2, 0) - vec2d(self.pos)).normalized()
                 self.active = True
                 self.pos = (self.pos[0], self.pos[1] -1)
 
@@ -414,13 +414,13 @@ class SpaceshipSprite(pygame.sprite.Sprite):
 
     def blit(self):
         if self.show_tractor_beam:
-            self.game.screen.blit(self.tractor_beam_image, (self.pos[0] + 18, self.pos[1] + 25))
+            self.game.surface.blit(self.tractor_beam_image, (self.pos[0] + 18, self.pos[1] + 25))
 
         if self.book_active:
-            self.game.screen.blit(self.book_image, self.book_position)
+            self.game.surface.blit(self.book_image, self.book_position)
 
         if self.active:
-            self.game.screen.blit(self.image, self.pos)
+            self.game.surface.blit(self.image, self.pos)
 
     def activate(self):
         self.active = True
