@@ -68,3 +68,22 @@ def post_event(event, **kwargs):
 def check_event(event):
     if event.type == MORONIAN_CUSTOM_EVENT:
         return event.dict
+
+
+class Timer(object):
+    _registry = []
+
+    @classmethod
+    def check_expired(cls):
+        for timer in cls._registry:
+            if timer.initial + timer.interval > pygame.time.get_ticks():
+                cls._registry.remove(timer)
+                callback(*args, **kwargs)
+
+    def __init__(self, interval, callback, *arg, **kwargs):
+        self.initial = pygame.time.get_ticks()
+        self.interval = interval
+        self.args = args
+        self.kwargs = kwargs
+
+        self.__class__._registry.append(self)

@@ -10,12 +10,13 @@ from .events import (EVENT_GAME_OVER, EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP,
     EVENT_STORY_SCRIPT_CAPTION, EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
     EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, EVENT_CHANGE_LEVEL)
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
-    DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT, PAUSE_TEXT_VERTICAL_OFFSET,
+    DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, GAME_LEVEL_ADDITION_BOSS, PAUSE_TEXT,
+    PAUSE_TEXT_VERTICAL_OFFSET,
     START_MESSAGE_TEXT, STORY_TEXT, GAME_LEVEL_STORY, GAME_LEVEL_ADDITION_LEVEL,
     GAME_LEVEL_SUBSTRACT_LEVEL, GAME_LEVEL_MULTIPLICATION_LEVEL, GAME_LEVEL_DIVISION_LEVEL,
-    GAME_LEVEL_TITLE, VERSION_TEXT, CREDITS_TEXT)
+    GAME_LEVEL_TITLE, VERSION_TEXT, CREDITS_TEXT, TEXT_LEVEL_COMPLETE)
 from .maps import Map1, Map2, Map3, Map4
-from .sprites import EnemySprite, PlayerSprite, SpaceshipSprite
+from .sprites import DarkBossSprite, EnemyEyePod, EnemySprite, PlayerSprite, SpaceshipSprite
 from .utils import check_event, hollow_text, outlined_text, post_event
 
 
@@ -144,40 +145,61 @@ class StoryLevel(Level):
             pygame.time.set_timer(EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, 2000)
 
 
+LEVEL_MODE_STOPPED = 0
+LEVEL_MODE_RUNNING = 1
+LEVEL_MODE_COMPLETE = 2
+LEVEL_MODE_PLAYER_DEATH = 3
+LEVEL_MODE_GAME_OVER = 4
+
 class PlayLevel(Level):
-    MODE_STOPPED = 0
-    MODE_RUNNING = 1
-    MODE_CLEAR = 2
-    MODE_GAME_OVER = 3
 
     def __init__(self, game):
         self.game = game
-        self.is_game_over = False
         self.game_over_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 32)
         self.result = []
         self.stage_score_value = 0
-        self.mode = self.MODE_STOPPED
+        self.mode = LEVEL_MODE_STOPPED
+        self.boss_level = False
+        self.display_game_over = False
+        self.display_level_complete = False
 
     def on_start(self):
-        pygame.mixer.music.load('assets/music/Zander Noriega - Darker Waves_0_looping.wav')
+        if self.boss_level:
+            pygame.mixer.music.load('assets/music/hold the line_1.ogg')
+        else:
+            pygame.mixer.music.load('assets/music/Zander Noriega - Darker Waves_0_looping.wav')
         pygame.mixer.music.play(-1)
         self.accept_input = True
         self.is_game_over = False
 
         self.enemies = []
         screen_size = self.game.surface.get_size()
-        for i in range(self.enemy_count):
-            origin_point = (randint(0, screen_size[0]), randint(0, screen_size[1]))
-            question, answer = self.question_function()
-            self.enemies.append(EnemySprite(self.game, self.game.enemy_font, question, answer, origin_point, self.enemy_speed, self.enemy_images, self.enemy_fps, self.enemy_score_value, self.enemy_attack_points))
-
         self.game.can_be_paused = True
-        self.mode = self.MODE_RUNNING
+        self.mode = LEVEL_MODE_RUNNING
         self.game.player_sprite.reset_position()
 
+        if self.boss_level:
+            origin_point = (randint(0, screen_size[0]), 0)
+            self.boss = self.boss_class(game=self.game, font=self.game.enemy_font, init_position=origin_point)
+        else:
+            #if self.enemy_images:
+            for i in range(self.enemy_count):
+                #origin_point = (randint(0, screen_size[0]), randint(0, screen_size[1]))
+                #question, answer = self.question_function()
+                #self.enemies.append(self.sprite_class(self.game, self.game.enemy_font, question, answer, origin_point, self.enemy_speed, self.enemy_images, self.enemy_fps, self.enemy_score_value, self.enemy_attack_points))
+                self.spawn_enemy(self.enemy_class)
+
+    def spawn_enemy(self, enemy_class, origin_point=None):
+        if not origin_point:
+            screen_size = self.game.surface.get_size()
+            origin_point = (randint(0, screen_size[0]), randint(0, screen_size[1]))
+        question, answer = self.question_function()
+        self.enemies.append(enemy_class(self.game, self.game.enemy_font, question, answer, origin_point))
+
     def on_event(self, event):
-        if event.type == pygame.KEYDOWN and self.is_game_over:
-            post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_TITLE)
+        if event.type == pygame.KEYDOWN:
+            if self.mode == LEVEL_MODE_GAME_OVER and pygame.time.get_ticks() > self._time_player_death + 2500:
+                post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_TITLE)
         elif event.type == EVENT_GAME_OVER:
             self.game_over()
         else:
@@ -188,60 +210,115 @@ class PlayLevel(Level):
                     #self._current_level = result['mode']
                     #self.modes[self._current_level].on_start()
 
-        if self.accept_input:
+        if self.player_sprite.is_alive():
             self.player_sprite.on_event(event)
 
     def on_update(self):
         # Draw player
         self.player_sprite.update(self.game.time_passed)
 
-        # Update and redraw all creeps
+        # Update and redraw all enemies
         for enemy in self.enemies:
             enemy.update(self.game.time_passed)
-            if pygame.sprite.collide_mask(enemy, self.player_sprite) and enemy.alive:
-                self.player_sprite.take_damage(enemy)
-                enemy.defeat(self.enemies)
 
-        if EnemySprite.is_all_defeated(self.enemies):
-            if self.player_sprite.alive:
-                self.player_sprite.score += self.stage_score_value
-                post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_level)
-            #self.player_sprite.win_scroll()
+        if self.boss_level:
+            self.boss.update(self.game.time_passed)
+        else:
+            if self.is_all_defeated():
+                if self.player_sprite.is_alive():
+                    self.player_sprite.score += self.stage_score_value
+                    post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_level)
+                #self.player_sprite.win_scroll()
 
-        if self.player_sprite.death:
-            self.stop_game()
+        if self.mode == LEVEL_MODE_PLAYER_DEATH:
+            if pygame.time.get_ticks() > self._time_player_death + 2000:
+                pygame.mixer.music.load('assets/music/lose music 3 - 2.wav')
+                pygame.mixer.music.play()
+                self.mode = LEVEL_MODE_GAME_OVER
+
+        if self.mode == LEVEL_MODE_COMPLETE:
+            if pygame.time.get_ticks() > self._time_level_complete + 2000:
+                self.game.shake_screen = False
+            else:
+                self.boss.on_explode()
+
+            if pygame.time.get_ticks() > self._time_level_complete + 4000:
+                self.game.get_current_level().player_sprite.on_win_scroll()
+                self.display_level_complete = True
+
+            if pygame.time.get_ticks() > self._time_level_complete + 8000:
+                self.display_level_complete = True
+
+            if pygame.time.get_ticks() > self._time_level_complete + 10000:
+                post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_TITLE)
 
     def blit(self):
         # Redraw the background
         self.game.display_tile_map(self.map)
 
         self.player_sprite.blit()
+        if self.boss_level:
+            self.boss.blit()
 
         # Update and redraw all creeps
         for enemy in self.enemies:
             enemy.blit()
 
-        if self.is_game_over:
+        if self.mode == LEVEL_MODE_GAME_OVER:
             text_size = self.game_over_font.size(GAME_OVER_TEXT)
             label = outlined_text(self.game_over_font, GAME_OVER_TEXT, COLOR_WHITE, COLOR_ALMOST_BLACK)
             self.game.surface.blit(label, (self.game.surface.get_size()[0] / 2 - text_size[0] / 2, self.game.surface.get_size()[1] / 2 - 90))
 
-    def stop_game(self):
+        if self.mode == LEVEL_MODE_COMPLETE:
+            if self.display_level_complete:
+                text_size = self.game_over_font.size(TEXT_LEVEL_COMPLETE)
+                label = outlined_text(self.game_over_font, TEXT_LEVEL_COMPLETE, COLOR_WHITE, COLOR_ALMOST_BLACK)
+                self.game.surface.blit(label, (self.game.surface.get_size()[0] / 2 - text_size[0] / 2, self.game.surface.get_size()[1] / 2 - 90))
+
+
+    def on_game_over(self):
+        self.game.can_be_paused = False
+        self.mode = LEVEL_MODE_PLAYER_DEATH
         self.accept_input = False
         self.result = []
         pygame.mixer.music.stop()
+
+        if not self.boss_level:
+            for enemy in self.enemies:
+                if enemy.alive:
+                    enemy.defeat(self.enemies)
+
+        self._time_player_death = pygame.time.get_ticks()
+
+    def is_all_defeated(self):
+        return self.enemies == []
+
+    def player_shot(self, player, answer):
+        hit = False
+        if self.boss_level:
+            self.boss.check_hit(answer)
+        for enemy in self.enemies:
+            if enemy.check_hit(answer):
+                hit = True
+                player.score += enemy.score_value
+                enemy.defeat(self.enemies)
+
+        if hit == False:
+            player.player_misses_shot()
+
+    def on_level_complete(self):
+        self.game.can_be_paused = False
+        pygame.mixer.music.stop()
+        self.accept_input = False
+        self.result = []
+        self.mode = LEVEL_MODE_COMPLETE
         for enemy in self.enemies:
             if enemy.alive:
                 enemy.defeat(self.enemies)
 
-        pygame.time.set_timer(EVENT_GAME_OVER, 3000)
-
-    def game_over(self):
-        self.is_game_over = True
-        pygame.time.set_timer(EVENT_GAME_OVER, 0)
-        pygame.mixer.music.load('assets/music/lose music 3 - 2.wav')
-        pygame.mixer.music.play()
-
+        if self.boss_level:
+            self._time_level_complete = pygame.time.get_ticks()
+            self.game.shake_screen = True
 
 word_list_spanish_english = [
 #    (chr(32), 'airplane'),
@@ -312,13 +389,23 @@ class AdditionLevel(PlayLevel):
         super(self.__class__, self).__init__(**kwargs)
         self.map = Map1()
         self.player_sprite = player
-        self.enemy_images = EnemySprite.load_sliced_sprites(32, 32, 'enemies/eye_pod_strip.png')
+        self.enemy_class = EnemyEyePod
         self.stage_score_value = 100
         self.question_function = lambda: formula_generator(OPERATOR_ADD, digits_1=1, digits_2=1)
         self.enemy_count = 8
-        self.enemy_speed = 0.005
-        self.enemy_fps = 8
-        self.enemy_score_value = 100
+        #self.next_level = GAME_LEVEL_SUBSTRACT_LEVEL
+        self.next_level = GAME_LEVEL_ADDITION_BOSS
+
+
+class AdditionBossLevel(PlayLevel):
+    def __init__(self, player, **kwargs):
+        super(self.__class__, self).__init__(**kwargs)
+        self.map = Map1()
+        self.boss_level = True
+        self.player_sprite = player
+        self.boss_class = DarkBossSprite
+        self.stage_score_value = 100
+        self.question_function = lambda: formula_generator(OPERATOR_ADD, digits_1=1, digits_2=1)
         self.enemy_attack_points = 5
         self.next_level = GAME_LEVEL_SUBSTRACT_LEVEL
 

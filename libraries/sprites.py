@@ -7,27 +7,21 @@ import pygame
 
 from .events import EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
-    HEALTH_BAR_TEXT, SCORE_TEXT, SEX_MALE)
-from .utils import outlined_text
+    HEALTH_BAR_TEXT, SCORE_TEXT, SEX_MALE, ENEMY_STATE_ALIVE, ENEMY_STATE_FIRING,
+    ENEMY_STATE_HIT, ENEMY_STATE_DEFEATED, PLAYER_STATE_ALIVE, PLAYER_STATE_FIRING,
+    PLAYER_STATE_HIT, PLAYER_STATE_INVINCIBLE, PLAYER_STATE_DEFEATED, PLAYER_STATE_DEAD,
+    TEXT_BOSS_HIT_POINT)
+from .utils import outlined_text, Timer
 from .vec2d import vec2d
 
+INTERVAL_INVINCIBLE = 1000
 
-#class Timer(object):
-#   self._registry = {}#
-
-#    def __init__(self, interval):
-#        self.actual = pygame.time.get_ticks()
-#        self.interval = interval
-#
-#        self.__class__._registry[id(self)] = self
-#
-#    def
 
 class CustomSprite(pygame.sprite.Sprite):
     @staticmethod
     def load_sliced_sprites(w, h, filename):
         images = []
-        master_image = pygame.image.load(os.path.join('assets', filename)).convert_alpha()
+        master_image = pygame.image.load(os.path.join('assets', filename))#.convert_alpha()
 
         master_width, master_height = master_image.get_size()
         for i in xrange(int(master_width / w)):
@@ -42,14 +36,15 @@ class PlayerSprite(CustomSprite):
         self.result_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
         self.thought_image = pygame.image.load('assets/players/thought.png').convert_alpha()
         self.scroll = pygame.image.load('assets/players/I_Scroll02.png').convert_alpha()
-        self.win_sound = pygame.mixer.Sound('assets/players/141695__copyc4t__levelup.wav')
+        self.music_win = 'assets/players/141695__copyc4t__levelup.wav'
         self.scroll_speed = 0.008
         self.total_health = 100
         self.hit_score_penalty = 100
         self.miss_score_penalty = 50
-        self.health_bar_image = pygame.image.load('assets/players/healthBar_100x12px_3Colors.png').convert_alpha()
+        self.health_bar_image = pygame.image.load('assets/players/healthBar_100x12px_green.png').convert_alpha()
         self.score = 0
         self.die_sound = pygame.mixer.Sound('assets/players/falldown.wav')
+        self.sound_hit = pygame.mixer.Sound('assets/players/04.ogg')
         self.sex = sex
         self.speed = 0.08
         self.fps = 8
@@ -73,6 +68,7 @@ class PlayerSprite(CustomSprite):
         self._delay = 1000 / self.fps
         self._last_update = 0
         self._frame = 0
+        self._state = PLAYER_STATE_ALIVE
 
         # Call update to set our first image.
         self.update(pygame.time.get_ticks(), force=True)
@@ -85,14 +81,13 @@ class PlayerSprite(CustomSprite):
         #    self.image = pygame.image.load('assets/players/girl.png').convert_alpha()
 
     def reset(self):
-        self.death = False
-        self.alive = True
-        self.death_roll = False
+        self._state = PLAYER_STATE_ALIVE
         self.health = self.total_health
-        self.has_scroll = False
         self.score = 0
         self.set_image()
         self.answer = []
+        #self.accept_input = True
+        self.has_scroll = False
 
     def reset_position(self):
         self.pos = (
@@ -104,7 +99,7 @@ class PlayerSprite(CustomSprite):
     def on_event(self, event):
         if event.type == pygame.KEYDOWN and not self.game.paused:
             if event.key == pygame.K_RETURN and self.answer:
-                EnemySprite.player_shot(self, ''.join(self.answer), self.game.get_current_level().enemies)
+                self.game.get_current_level().player_shot(self, ''.join(self.answer))
                 self.answer = []
             elif event.key == pygame.K_BACKSPACE:
                 self.answer = self.answer[0: -1]
@@ -121,30 +116,30 @@ class PlayerSprite(CustomSprite):
                 self._images = self.walk_left_images
 
     def update(self, time_passed, force=False):
-        keys_pressed = pygame.key.get_pressed()
+        if not self.game.paused and self.is_alive():
+            keys_pressed = pygame.key.get_pressed()
 
-        direction_y = 0
-        direction_x = 0
+            direction_y = 0
+            direction_x = 0
 
-        if keys_pressed[pygame.K_LEFT]:
-            direction_x = -1
+            if keys_pressed[pygame.K_LEFT]:
+                direction_x = -1
 
-        if keys_pressed[pygame.K_RIGHT]:
-            direction_x = 1
+            if keys_pressed[pygame.K_RIGHT]:
+                direction_x = 1
 
-        if keys_pressed[pygame.K_UP]:
-            direction_y = -1
+            if keys_pressed[pygame.K_UP]:
+                direction_y = -1
 
-        if keys_pressed[pygame.K_DOWN]:
-            direction_y = 1
+            if keys_pressed[pygame.K_DOWN]:
+                direction_y = 1
 
-        #if not wait(2000).next():
-        #    print 'asd'
-        #    #self.die_sound.play()
+            #if not wait(2000).next():
+            #    print 'asd'
+            #    #self.die_sound.play()
 
-        self.direction = vec2d(direction_x, direction_y).normalized()
+            self.direction = vec2d(direction_x, direction_y).normalized()
 
-        if not self.game.paused:
             if direction_x != 0 or direction_y != 0:
                 t = pygame.time.get_ticks()
                 if t - self._last_update > self._delay or force:
@@ -156,14 +151,13 @@ class PlayerSprite(CustomSprite):
             else:
                 self._frame = 0
 
-            if self.alive:
-                displacement = vec2d(
-                    self.direction.x * self.speed * time_passed,
-                    self.direction.y * self.speed * time_passed
-                )
+            displacement = vec2d(
+                self.direction.x * self.speed * time_passed,
+                self.direction.y * self.speed * time_passed
+            )
 
-                self.pos += displacement
-                self.rect.topleft = [self.pos.x, self.pos.y]
+            self.pos += displacement
+            self.rect.topleft = [self.pos.x, self.pos.y]
 
         if self.has_scroll:
             if not self.scroll_position[1] < self.scroll_original_position[1] - 40:
@@ -172,26 +166,25 @@ class PlayerSprite(CustomSprite):
                     self.scroll_direction.y * self.scroll_speed * time_passed
                 )
                 self.scroll_position += displacement
-            else:
-                if self.win_time + 8000 < pygame.time.get_ticks():
-                    self.game.can_be_paused = True
-                    self.has_scroll = False
-                    raise LevelComplete
+            #else:
+            #    if self.win_time + 8000 < pygame.time.get_ticks():
+            #        self.game.can_be_paused = True
+            #        self.has_scroll = False
+            #        raise LevelComplete
 
-        if self.death and self.death_time + 1000 < pygame.time.get_ticks():
-            self.die_sound.play()
-            self.death_roll = True
-            self.death = False
+        if self._state == PLAYER_STATE_DEFEATED:
+            if pygame.time.get_ticks() > self._time_death + 1000:
+                self.accept_input = False
+                self.die_sound.play()
+                self._state = PLAYER_STATE_DEAD
+                self.image = pygame.transform.rotozoom(self.walk_left_images[0], 90, 1)
+
+        if self._state == PLAYER_STATE_INVINCIBLE:
+            if pygame.time.get_ticks() > self._invincible_initial_time + INTERVAL_INVINCIBLE:
+                self._state = PLAYER_STATE_ALIVE
 
     def blit(self):
-        if self.death_roll:
-            if self.sex == SEX_MALE:
-                self.image = pygame.image.load('assets/players/boy_left_view_2.png').convert_alpha()
-            else:
-                self.image = pygame.image.load('assets/players/girl_left_view_2.png').convert_alpha()
-            self.game.surface.blit(pygame.transform.rotozoom(self.image, 90, 1), self.pos)
-        else:
-            self.game.surface.blit(self.image, self.pos)
+        self.game.surface.blit(self.image, self.pos)
 
         # Blit health bar
         text_size = self.result_font.size(HEALTH_BAR_TEXT)
@@ -218,75 +211,72 @@ class PlayerSprite(CustomSprite):
             label = outlined_text(self.result_font, answer_string, COLOR_WHITE, COLOR_ALMOST_BLACK)
             self.game.surface.blit(label, (self.pos[0] + self.size[0] / 2 - text_size[0] / 2, self.pos[1] - 30))
 
-    def win_scroll(self):
-        if not self.has_scroll and self.alive:
-            pygame.mixer.music.stop()
+    def on_win_scroll(self):
+        if not self.has_scroll:
             self.has_scroll = True
-            self.win_sound.play()
+            pygame.mixer.music.load(self.music_win)
+            pygame.mixer.music.play()
             self.scroll_direction = (vec2d(self.pos[0], 0) - vec2d(self.pos)).normalized()
             self.scroll_position = ((self.pos[0] + self.size[0] / 2) - self.scroll.get_size()[0] / 2, self.pos[1] - 80)
             self.scroll_original_position = self.scroll_position
-            self.win_time = pygame.time.get_ticks()
-            self.game.can_be_paused = False
+            self._time_win_time = pygame.time.get_ticks()
 
     def take_damage(self, enemy):
-        self.score -= self.hit_score_penalty
-        if self.score < 0:
-            self.score = 0
+        if self._state == PLAYER_STATE_ALIVE:
+            displacement = vec2d(
+                enemy.direction.x * 50,
+                enemy.direction.y * 50
+            )
 
-        self.health -= enemy.attack_points
-        if self.health <= 0:
-            self.health = 0
-            self.player_dies()
+            self.pos += displacement
+            self.rect.topleft = [self.pos.x, self.pos.y]
+
+            self.sound_hit.play()
+            self._invincible_initial_time = pygame.time.get_ticks()
+            self._state = PLAYER_STATE_INVINCIBLE
+            self.score -= self.hit_score_penalty
+            if self.score < 0:
+                self.score = 0
+            self.health -= enemy.attack_points
+            if self.health <= 0:
+                self.health = 0
+                self.player_dies()
 
     def player_dies(self):
-        self.game.can_be_paused = False
         self.alive = False
-        self.death = True
-        self.death_time = pygame.time.get_ticks()
         self.answer = []
+        self.game.get_current_level().on_game_over()
+        self._state = PLAYER_STATE_DEFEATED
+        self._time_death = pygame.time.get_ticks()
 
     def player_misses_shot(self):
         self.score -= self.miss_score_penalty
         if self.score < 0:
             self.score = 0
 
+    def is_alive(self):
+        if self._state != PLAYER_STATE_DEAD and self._state != PLAYER_STATE_DEFEATED:
+            return True
+        else:
+            return False
+
 
 class EnemySprite(CustomSprite):
-    @staticmethod
-    def is_all_defeated(enemies):
-        return enemies == []
-
-    @staticmethod
-    def player_shot(player, answer, enemies):
-        hit = False
-        for enemy in enemies:
-            if enemy.answer == answer:
-                hit = True
-                player.score += enemy.prize_value
-                enemy.defeat(enemies)
-
-        if hit == False:
-            player.player_misses_shot()
-
-    def __init__(self, game, font, question, answer, init_position, speed, images, fps, value, attack_points):
+    def __init__(self, game, font, question, answer, init_position):
         pygame.sprite.Sprite.__init__(self)
-        self._images = images
-        self.speed = speed
         self._start = pygame.time.get_ticks()
-        self._delay = 1000 / fps
+        self._delay = 1000 / self.fps
         self._last_update = 0
         self._frame = 0
         self.font = font
         self.question = question
         self.answer = answer
-        self.rect = self._images[0].get_rect()
-        self.size = self._images[0].get_size()
+        self.rect = self.images[0].get_rect()
+        self.size = self.images[0].get_size()
         self.game = game
         self.alive = True
         self.loop = True
-        self.prize_value = value
-        self.attack_points = attack_points
+        self.state = ENEMY_STATE_ALIVE
 
         self.pos = vec2d(init_position)
         self.smoke_images = [
@@ -318,14 +308,14 @@ class EnemySprite(CustomSprite):
             t = pygame.time.get_ticks()
             if t - self._last_update > self._delay or force:
                 self._frame += 1
-                if self._frame >= len(self._images):
+                if self._frame >= len(self.images):
                     if self.loop:
                         self._frame = 0
                     else:
                         self._frame -= 1
                         self.enemies.remove(self)
 
-                self.image = self._images[self._frame]
+                self.image = self.images[self._frame]
                 self._last_update = t
 
             if self.alive:
@@ -336,6 +326,12 @@ class EnemySprite(CustomSprite):
 
                 self.pos += displacement
                 self.rect.topleft = [self.pos.x, self.pos.y]
+
+            player = self.game.get_current_level().player_sprite
+
+            if pygame.sprite.collide_mask(self, player) and self.alive and player.is_alive():
+                player.take_damage(self)
+                self.defeat(self.game.get_current_level().enemies)
 
     def blit(self):
         self.game.surface.blit(self.image, (self.pos.x, self.pos.y))
@@ -350,9 +346,162 @@ class EnemySprite(CustomSprite):
         if self.alive:
             self.alive = False
             self.loop = False
+            self.images = self.smoke_images
+            self.death_sound.play()
+            self.enemies = enemies
+
+    def check_hit(self, answer):
+        if answer == self.answer:
+            return True
+        else:
+            return False
+
+    def is_alive(self):
+        if self._state != ENEMY_STATE_DEFEATED:
+            return True
+        else:
+            return False
+
+
+class EnemyEyePod(EnemySprite):
+    images = EnemySprite.load_sliced_sprites(32, 32, 'enemies/eye_pod_strip.png')
+    speed = 0.005
+    fps = 8
+    score_value = 100
+    attack_points = 5
+
+
+class BossSprite(EnemySprite):
+    def __init__(self, game, font, init_position):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = self.images[0]
+        self.rect = self.images[0].get_rect()
+        self.size = self.images[0].get_size()
+        self.game = game
+        self.alive = True
+        self._state = ENEMY_STATE_ALIVE
+        self._move_time = 0
+        self.hit_point_bar_image = pygame.image.load('assets/enemies/healthBar_100x12px_red.png').convert_alpha()
+
+        self.pos = vec2d(init_position)
+        self.sound_death = pygame.mixer.Sound('assets/enemies/zombie-17.wav')
+        self.sound_hit = pygame.mixer.Sound('assets/enemies/zombie-5.wav')
+        self.death_scream_done = False
+
+        # Calculate initial direction
+        self.direction = vec2d(1, 0)  # To the right
+
+        # Call update to set our first image.
+        #self.update(pygame.time.get_ticks(), force=True)
+
+
+    def update(self, time_passed, force=False):
+        # Re calculate direction to follow player
+        #self.direction = (self.game.player_sprite.pos - self.pos).normalized()
+
+        if self._state == ENEMY_STATE_ALIVE:
+            if pygame.time.get_ticks() > self._move_time + 1000:
+                self._state = ENEMY_STATE_FIRING
+                self._time_fire = pygame.time.get_ticks()
+
+        if self._state == ENEMY_STATE_FIRING:
+            if pygame.time.get_ticks() > self._time_fire + 500:
+                self.image = self.images[0]
+                self._state = ENEMY_STATE_ALIVE
+                self._move_time = pygame.time.get_ticks()
+                self.game.get_current_level().spawn_enemy(EnemyEyePod, origin_point=(self.pos[0] + self.image.get_size()[0] / 2, self.pos[1] + self.image.get_size()[1]))
+            else:
+                self.image = self.images[1]
+
+        if self._state == ENEMY_STATE_HIT:
+            if pygame.time.get_ticks() > self._time_hit + 500:
+                self._state = ENEMY_STATE_ALIVE
+                self._move_time = pygame.time.get_ticks()
+
+        if self.alive:
+            displacement = vec2d(
+                self.direction.x * self.speed * time_passed,
+                self.direction.y * self.speed * time_passed
+            )
+
+            self.pos += displacement
+            self.rect.topleft = [self.pos.x, self.pos.y]
+            self.image_w, self.image_h = self.image.get_size()
+            bounds_rect = self.game.surface.get_rect().inflate(-self.image_w, -self.image_h)
+
+            if self.pos.x < bounds_rect.left:
+                self.pos.x = bounds_rect.left
+                self.direction.x *= -1
+            elif self.pos.x > bounds_rect.right:
+                self.pos.x = bounds_rect.right
+                self.direction.x *= -1
+            elif self.pos.y < bounds_rect.top:
+                self.pos.y = bounds_rect.top
+                self.direction.y *= -1
+            elif self.pos.y > bounds_rect.bottom:
+                self.pos.y = bounds_rect.bottom
+                self.direction.y *= -1
+
+            if pygame.sprite.collide_mask(self, self.game.get_current_level().player_sprite) and self.alive:
+                self.game.get_current_level().player_sprite.take_damage(self)
+
+    def blit(self):
+        self.game.surface.blit(self.image, (self.pos.x, self.pos.y))
+        #if self.alive:
+        #    # If enemy is alive show it's question
+        #    text_size = self.font.size(self.question)
+        #    label = outlined_text(self.font, self.question, COLOR_WHITE, COLOR_ALMOST_BLACK)
+
+        #    self.game.surface.blit(label, (self.pos.x + self.size[0] / 2 - text_size[0] / 2, self.pos.y - 11))
+
+        # Blit health bar
+        if self.is_alive():
+            HP_BAR_HORIZONTAL_POSITION = 170
+            HP_BAR_VERTICAL_POSITION = 40
+            text_size = self.game.font.size(TEXT_BOSS_HIT_POINT)
+            label = outlined_text(self.game.font, TEXT_BOSS_HIT_POINT, COLOR_WHITE, COLOR_ALMOST_BLACK)
+            self.game.surface.blit(label, (HP_BAR_HORIZONTAL_POSITION, HP_BAR_VERTICAL_POSITION))
+            self.game.surface.blit(self.hit_point_bar_image, (text_size[0] + HP_BAR_HORIZONTAL_POSITION + 5, HP_BAR_VERTICAL_POSITION), area=pygame.Rect(0, 0, self.hit_point_bar_image.get_size()[0] * self.hit_points / float(self.total_hit_points), self.hit_point_bar_image.get_size()[1]))
+
+    def check_hit(self, answer):
+        for enemy in self.game.get_current_level().enemies:
+            if enemy.check_hit(answer):
+                self.sound_hit.play()
+                self._state = ENEMY_STATE_HIT
+                self.image = self.images[2]
+                self._time_hit = pygame.time.get_ticks()
+                self.hit_points -= 10
+                if self.hit_points <= 0:
+                    self.hit_points = 0
+                    self._state = ENEMY_STATE_DEFEATED
+                    self.game.get_current_level().on_level_complete()
+                    self.direction = vec2d(0, 0)  # To the right
+                    self.game.get_current_level().on_level_complete()
+
+    def defeat(self, enemies):
+        if self.alive:
+            self.alive = False
+            self.loop = False
             self.enemies = enemies
             self._images = self.smoke_images
             self.death_sound.play()
+
+    def on_fire(self):
+        self.state = ENEMY_STATE_FIRING
+
+    def on_explode(self):
+        if not self.death_scream_done:
+            self.death_scream_done = True
+            self.sound_death.play()
+
+
+class DarkBossSprite(BossSprite):
+    images = EnemySprite.load_sliced_sprites(122, 110, 'enemies/dark_boss_strip.png')
+    values = 5000
+    attack_points = 115
+    speed = 0.1
+    hit_points = 25
+    total_hit_points = 25
 
 
 class SpaceshipSprite(pygame.sprite.Sprite):

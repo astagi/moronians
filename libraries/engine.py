@@ -11,14 +11,15 @@ from .exceptions import SwallowEvent
 from .events import (EVENT_GAME_OVER, EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, EVENT_STORY_SCRIPT_CAPTION,
     EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
     EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, EVENT_CHANGE_LEVEL)
-from .levels import (TitleScreen, StoryLevel, AdditionLevel, SubstractionLevel,
-    MultiplicationLevel, DivisionLevel)
+from .levels import (AdditionLevel, AdditionBossLevel, DivisionLevel, MultiplicationLevel,
+    StoryLevel, SubstractionLevel, TitleScreen)
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
-    DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT, PAUSE_TEXT_VERTICAL_OFFSET,
-    START_MESSAGE_TEXT, STORY_TEXT, GAME_LEVEL_TITLE, GAME_LEVEL_STORY, GAME_LEVEL_ADDITION_LEVEL,
-    GAME_LEVEL_SUBSTRACT_LEVEL, GAME_LEVEL_MULTIPLICATION_LEVEL, GAME_LEVEL_DIVISION_LEVEL)
+    DEFAULT_SCREENSIZE, GAME_LEVEL_ADDITION_BOSS, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT,
+    PAUSE_TEXT_VERTICAL_OFFSET, START_MESSAGE_TEXT, STORY_TEXT, GAME_LEVEL_TITLE,
+    GAME_LEVEL_STORY, GAME_LEVEL_ADDITION_LEVEL, GAME_LEVEL_SUBSTRACT_LEVEL,
+    GAME_LEVEL_MULTIPLICATION_LEVEL, GAME_LEVEL_DIVISION_LEVEL)
 from .sprites import PlayerSprite
-from .utils import hollow_text, outlined_text, post_event, check_event
+from .utils import hollow_text, outlined_text, post_event, check_event, Timer
 from .vec2d import vec2d
 
 logger = logging.getLogger(__name__)
@@ -38,15 +39,18 @@ class Game(object):
         self.running = True
         self.pause_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 15)
         self.enemy_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
+        self.font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
         self.pause_sound = pygame.mixer.Sound('assets/sounds/pause.wav')
         self.player_sprite = PlayerSprite(self)
         pygame.display.set_caption(GAME_TITLE)
         self._current_level = None
+        self.shake_screen = False
 
         self.modes = {
             GAME_LEVEL_TITLE: TitleScreen(self),
             GAME_LEVEL_STORY: StoryLevel(self),
             GAME_LEVEL_ADDITION_LEVEL: AdditionLevel(game=self, player=self.player_sprite),
+            GAME_LEVEL_ADDITION_BOSS: AdditionBossLevel(game=self, player=self.player_sprite),
             GAME_LEVEL_SUBSTRACT_LEVEL: SubstractionLevel(game=self, player=self.player_sprite),
             GAME_LEVEL_MULTIPLICATION_LEVEL: MultiplicationLevel(game=self, player=self.player_sprite),
             GAME_LEVEL_DIVISION_LEVEL: DivisionLevel(game=self, player=self.player_sprite),
@@ -102,6 +106,7 @@ class Game(object):
             self.on_render()
 
     def on_loop(self):
+        Timer.check_expired()
         self.modes[self._current_level].on_update()
 
     def on_blit(self):
@@ -109,7 +114,10 @@ class Game(object):
         if self.paused:
             self.display_pause_label(self.pause_font)
 
-        self._screen.blit(self.surface, (0, 0))
+        if self.shake_screen:
+            self._screen.blit(self.surface, (randint(0, 10), randint(0, 10)))
+        else:
+            self._screen.blit(self.surface, (0, 0))
 
     def on_render(self):
         pygame.display.flip()
@@ -117,13 +125,13 @@ class Game(object):
     def display_box(self, font, message, position, size):
         BORDER_SIZE = 2
         if len(message) != 0:
-            pygame.draw.rect(self.screen, COLOR_BLACK, (position[0] + BORDER_SIZE, position[1] + BORDER_SIZE, size[0] - BORDER_SIZE, size[1] - BORDER_SIZE), 0)
-            pygame.draw.rect(self.screen, COLOR_WHITE, (position[0], position[1], size[0], size[1]), 1)
+            pygame.draw.rect(self._screen, COLOR_BLACK, (position[0] + BORDER_SIZE, position[1] + BORDER_SIZE, size[0] - BORDER_SIZE, size[1] - BORDER_SIZE), 0)
+            pygame.draw.rect(self._screen, COLOR_WHITE, (position[0], position[1], size[0], size[1]), 1)
             self.surface.blit(font.render(message, 1, COLOR_WHITE), (position[0] + BORDER_SIZE, position[1] + BORDER_SIZE))
 
     def display_pause_label(self, font):
         text_size = font.size(PAUSE_TEXT)
-        self.surface.blit(font.render(PAUSE_TEXT, 1, COLOR_WHITE), (self.screen.get_width() / 2 - text_size[0] / 2, self.screen.get_height() / 2 - text_size[1] / 2 - PAUSE_TEXT_VERTICAL_OFFSET))
+        self.surface.blit(font.render(PAUSE_TEXT, 1, COLOR_WHITE), (self._screen.get_width() / 2 - text_size[0] / 2, self._screen.get_height() / 2 - text_size[1] / 2 - PAUSE_TEXT_VERTICAL_OFFSET))
 
     def display_tile_map(self, map):
         #loops through map to set background
