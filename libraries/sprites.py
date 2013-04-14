@@ -157,6 +157,16 @@ class SpritePlayer(SpriteCustom):
             )
 
             self.pos += displacement
+            bounds_rect = self.game.surface.get_rect()
+
+            if self.pos.x < bounds_rect.left:
+                self.pos.x = bounds_rect.left
+            elif self.pos.x + self.size[0] > bounds_rect.right:
+                self.pos.x = bounds_rect.right - self.size[0]
+            elif self.pos.y < bounds_rect.top:
+                self.pos.y = bounds_rect.top
+            elif self.pos.y + self.size[1] > bounds_rect.bottom:
+                self.pos.y = bounds_rect.bottom - self.size[1]
             self.rect.topleft = [self.pos.x, self.pos.y]
 
         if self.has_scroll:
@@ -295,10 +305,11 @@ class SpriteEnemy(SpriteCustom):
         self.death_sound = pygame.mixer.Sound('assets/sounds/8bit_bomb_explosion.wav')
 
         # Calculate initial direction
-        self.direction = (vec2d(self.game.surface.get_size()[0] / 2,self.game.surface.get_size()[1] / 2) - vec2d(init_position)).normalized()
+        #self.direction = (vec2d(self.game.surface.get_size()[0] / 2,self.game.surface.get_size()[1] / 2) - vec2d(init_position)).normalized()
+        self.direction = vec2d(1, 1).normalized()
 
         # Call update to set our first image.
-        self.update(pygame.time.get_ticks(), force=True)
+        self.update(0, force=True)
 
     def update(self, time_passed, force=False):
         # Re calculate direction to follow player
@@ -429,7 +440,7 @@ class SpriteBoss(SpriteEnemy):
                 self._time_fire = pygame.time.get_ticks()
 
         if self._state == ENEMY_STATE_FIRING:
-            if pygame.time.get_ticks() > self._time_fire + 500:
+            if pygame.time.get_ticks() > self._time_fire + 200:
                 self.image = self.images[0]
                 self._state = ENEMY_STATE_ALIVE
                 self._move_time = pygame.time.get_ticks()
