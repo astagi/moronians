@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 from ast import literal_eval
 import os
+from random import randint, choice
 
 import pygame
 
@@ -305,17 +306,15 @@ class SpriteEnemy(SpriteCustom):
         self.death_sound = pygame.mixer.Sound('assets/sounds/8bit_bomb_explosion.wav')
 
         # Calculate initial direction
-        #self.direction = (vec2d(self.game.surface.get_size()[0] / 2,self.game.surface.get_size()[1] / 2) - vec2d(init_position)).normalized()
-        self.direction = vec2d(1, 1).normalized()
+        self.direction = (vec2d(self.game.surface.get_size()[0] / 2,self.game.surface.get_size()[1] / 2) - vec2d(init_position)).normalized()
 
         # Call update to set our first image.
         self.update(0, force=True)
 
     def update(self, time_passed, force=False):
         # Re calculate direction to follow player
-        self.direction = (self.game.player.pos - self.pos).normalized()
-
         if not self.game.paused:
+            self.direction = (self.game.player.pos - self.pos).normalized()
             t = pygame.time.get_ticks()
             if t - self._last_update > self._delay or force:
                 self._frame += 1
@@ -612,3 +611,42 @@ class SpriteSpaceship(pygame.sprite.Sprite):
     def activate(self):
         self.active = True
         self.original_position = self.pos
+
+
+class SpritePowerUp(pygame.sprite.Sprite):
+    def __init__(self, game):
+        pygame.sprite.Sprite.__init__(self)
+        self.game = game
+        self.active = False
+        self.sound = pygame.mixer.Sound(self.sound_file)
+
+    def on_update(self, time_passed):
+        if not self.active:
+            if self.chance():
+                self._time_initial = pygame.time.get_ticks()
+                self.active = True
+                surface_size = self.game.surface.get_size()
+                self.pos = (randint(0, surface_size[0] - self.image.get_size()[0]), randint(0, surface_size[1] - self.image.get_size()[0]))
+                self.rect = self.image.get_rect()
+                self.size = self.image.get_size()
+                self.rect.topleft = [self.pos[0], self.pos[1]]
+        if self.active:
+            if pygame.time.get_ticks() > self._time_initial + 6000:
+                self.active = False
+            else:
+                if pygame.sprite.collide_mask(self, self.game.player):
+                    self.active = False
+                    self.sound.play()
+                    self.game.player.health += 20
+                    if self.game.player.health > self.game.player.total_health:
+                        self.game.player.health = self.game.player.total_health
+
+    def blit(self):
+        if self.active:
+            self.game.surface.blit(self.image, self.pos)
+
+
+class PowerUpApple(SpritePowerUp):
+    chance = lambda self: randint(0, 200) == 2
+    image = pygame.image.load('assets/powerups/I_C_Apple.png')
+    sound_file = 'assets/powerups/15.ogg'

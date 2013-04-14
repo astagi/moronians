@@ -55,7 +55,7 @@ class Game(object):
             GAME_LEVEL_MULTIPLICATION_LEVEL: MultiplicationLevel(game=self, player=self.player),
             GAME_LEVEL_DIVISION_LEVEL: DivisionLevel(game=self, player=self.player),
         }
-        post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_SUBSTRACT_LEVEL)
+        post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_ADDITION_BOSS)
 
     def get_current_level(self):
         return self.modes[self._current_level]

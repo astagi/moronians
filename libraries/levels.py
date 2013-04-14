@@ -16,7 +16,8 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     GAME_LEVEL_SUBSTRACT_LEVEL, GAME_LEVEL_MULTIPLICATION_LEVEL, GAME_LEVEL_DIVISION_LEVEL,
     GAME_LEVEL_TITLE, VERSION_TEXT, CREDITS_TEXT, TEXT_LEVEL_COMPLETE)
 from .maps import Map1, Map2, Map3, Map4
-from .sprites import EnemyArachnid, EnemyEyePod, EnemyFlyingBot, EnemyRedSlime, SpriteDarkBoss, SpriteSpaceship
+from .sprites import (EnemyArachnid, EnemyEyePod, EnemyFlyingBot, EnemyRedSlime,
+    PowerUpApple, SpriteDarkBoss, SpriteSpaceship)
 from .utils import check_event, hollow_text, outlined_text, post_event
 
 
@@ -152,7 +153,6 @@ LEVEL_MODE_PLAYER_DEATH = 3
 LEVEL_MODE_GAME_OVER = 4
 
 class PlayLevel(Level):
-
     def __init__(self, game):
         self.game = game
         self.game_over_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 32)
@@ -162,6 +162,7 @@ class PlayLevel(Level):
         self.boss_level = False
         self.display_game_over = False
         self.display_level_complete = False
+        self.powerups = [PowerUpApple(self.game)]
 
     def on_start(self):
         if self.boss_level:
@@ -212,6 +213,10 @@ class PlayLevel(Level):
             self.player.on_event(event)
 
     def on_update(self):
+        if self.mode == LEVEL_MODE_RUNNING:
+            for powerup in self.powerups:
+                powerup.on_update(self.game.time_passed)
+
         # Draw player
         self.player.update(self.game.time_passed)
 
@@ -253,6 +258,9 @@ class PlayLevel(Level):
     def blit(self):
         # Redraw the background
         self.game.display_tile_map(self.map)
+
+        for powerup in self.powerups:
+            powerup.blit()
 
         self.player.blit()
         if self.boss_level:
