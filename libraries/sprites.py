@@ -46,6 +46,7 @@ class SpritePlayer(SpriteCustom):
         self.score = 0
         self.die_sound = pygame.mixer.Sound('assets/players/falldown.wav')
         self.sound_hit = pygame.mixer.Sound('assets/players/04.ogg')
+        self.sound_misses = pygame.mixer.Sound('assets/players/05.ogg')
         self.sex = sex
         self.speed = 0.08
         self.fps = 8
@@ -271,6 +272,8 @@ class SpritePlayer(SpriteCustom):
         self.score -= self.miss_score_penalty
         if self.score < 0:
             self.score = 0
+        else:
+            self.sound_misses.play()
 
     def is_alive(self):
         if self._state != PLAYER_STATE_DEAD and self._state != PLAYER_STATE_DEFEATED:
@@ -628,8 +631,12 @@ class SpritePowerUp(pygame.sprite.Sprite):
         self.active = False
         self.sound = pygame.mixer.Sound(self.sound_file)
         self.image = pygame.image.load(self.image_file)
+        self.effect_active = False
+        self._time_initial = 0
 
     def on_update(self, time_passed):
+        self.effect()
+
         if not self.active:
             if self.chance():
                 self._time_initial = pygame.time.get_ticks()
@@ -646,16 +653,34 @@ class SpritePowerUp(pygame.sprite.Sprite):
                 if pygame.sprite.collide_mask(self, self.game.player):
                     self.active = False
                     self.sound.play()
-                    self.game.player.health += 20
-                    if self.game.player.health > self.game.player.total_health:
-                        self.game.player.health = self.game.player.total_health
+                    self.collision()
 
     def blit(self):
         if self.active:
             self.game.surface.blit(self.image, self.pos)
+
+    def effect(self):
+        pass
 
 
 class PowerUpApple(SpritePowerUp):
     chance = lambda self: randint(0, 500) == 0
     image_file = 'assets/powerups/I_C_Apple.png'
     sound_file = 'assets/powerups/15.ogg'
+
+    def collision(self):
+        self.game.player.health += 20
+        if self.game.player.health > self.game.player.total_health:
+            self.game.player.health = self.game.player.total_health
+
+
+class PowerUpShield(SpritePowerUp):
+    chance = lambda self: randint(0, 500) == 0
+    image_file = 'assets/powerups/E_Metal04.png'
+    sound_file = 'assets/powerups/16.ogg'
+
+    def collision(self):
+        self.effect_active = True
+        self._time_initial = pygame.time.get_ticks()
+        self.game.player._state = PLAYER_STATE_INVINCIBLE
+        self.game.player._invincible_initial_time = pygame.time.get_ticks() + 5000

@@ -17,7 +17,7 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     GAME_LEVEL_TITLE, VERSION_TEXT, CREDITS_TEXT, TEXT_LEVEL_COMPLETE)
 from .maps import Map1, Map2, Map3, Map4
 from .sprites import (EnemyArachnid, EnemyEyePod, EnemyFlyingBot, EnemyRedSlime,
-    PowerUpApple, SpriteDarkBoss, SpriteSpaceship)
+    PowerUpApple, PowerUpShield, SpriteDarkBoss, SpriteSpaceship)
 from .utils import check_event, hollow_text, outlined_text, post_event
 
 
@@ -162,7 +162,7 @@ class PlayLevel(Level):
         self.boss_level = False
         self.display_game_over = False
         self.display_level_complete = False
-        self.powerups = [PowerUpApple(self.game)]
+        self.powerups = [PowerUpApple(self.game), PowerUpShield(self.game)]
 
     def on_start(self):
         if self.boss_level:
@@ -213,12 +213,12 @@ class PlayLevel(Level):
             self.player.on_event(event)
 
     def on_update(self):
+        # Draw player
+        self.player.update(self.game.time_passed)
+
         if self.mode == LEVEL_MODE_RUNNING:
             for powerup in self.powerups:
                 powerup.on_update(self.game.time_passed)
-
-        # Draw player
-        self.player.update(self.game.time_passed)
 
         # Update and redraw all enemies
         for enemy in self.enemies:
