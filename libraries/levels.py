@@ -308,6 +308,7 @@ class PlayLevel(Level):
                 hit = True
                 player.score += enemy.score_value
                 enemy.defeat(self.enemies)
+                break;
 
         if hit == False:
             player.player_misses_shot()

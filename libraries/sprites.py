@@ -53,6 +53,7 @@ class SpritePlayer(SpriteCustom):
         self.walk_up_images = SpritePlayer.load_sliced_sprites(34, 34, 'players/boy_walk_up_stripe.png')
         self.walk_left_images = SpritePlayer.load_sliced_sprites(34, 34, 'players/boy_walk_left_stripe.png')
         self.walk_right_images = SpritePlayer.load_sliced_sprites(34, 34, 'players/boy_walk_right_stripe.png')
+        self.visible = True
 
         self.reset()
 
@@ -193,9 +194,15 @@ class SpritePlayer(SpriteCustom):
         if self._state == PLAYER_STATE_INVINCIBLE:
             if pygame.time.get_ticks() > self._invincible_initial_time + INTERVAL_INVINCIBLE:
                 self._state = PLAYER_STATE_ALIVE
+            else:
+                self.visible = not self.visible
+
+        if self._state == PLAYER_STATE_ALIVE:
+            self.visible = True
 
     def blit(self):
-        self.game.surface.blit(self.image, self.pos)
+        if self.visible:
+            self.game.surface.blit(self.image, self.pos)
 
         # Blit health bar
         text_size = self.result_font.size(HEALTH_BAR_TEXT)
@@ -514,6 +521,7 @@ class SpriteBoss(SpriteEnemy):
                     self.game.get_current_level().on_level_complete()
                     self.direction = vec2d(0, 0)
                     self.game.get_current_level().on_level_complete()
+                break;
 
     def defeat(self, enemies):
         if self.alive:
@@ -619,6 +627,7 @@ class SpritePowerUp(pygame.sprite.Sprite):
         self.game = game
         self.active = False
         self.sound = pygame.mixer.Sound(self.sound_file)
+        self.image = pygame.image.load(self.image_file)
 
     def on_update(self, time_passed):
         if not self.active:
@@ -647,6 +656,6 @@ class SpritePowerUp(pygame.sprite.Sprite):
 
 
 class PowerUpApple(SpritePowerUp):
-    chance = lambda self: randint(0, 200) == 2
-    image = pygame.image.load('assets/powerups/I_C_Apple.png')
+    chance = lambda self: randint(0, 500) == 0
+    image_file = 'assets/powerups/I_C_Apple.png'
     sound_file = 'assets/powerups/15.ogg'
