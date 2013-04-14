@@ -8,7 +8,7 @@ import sys
 import pygame
 
 from .exceptions import SwallowEvent
-from .events import (EVENT_GAME_OVER, EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, EVENT_STORY_SCRIPT_CAPTION,
+from .events import (EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, EVENT_STORY_SCRIPT_CAPTION,
     EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
     EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, EVENT_CHANGE_LEVEL)
 from .levels import (AdditionLevel, AdditionBossLevel, DivisionLevel, MultiplicationLevel,
@@ -18,7 +18,7 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     PAUSE_TEXT_VERTICAL_OFFSET, START_MESSAGE_TEXT, STORY_TEXT, GAME_LEVEL_TITLE,
     GAME_LEVEL_STORY, GAME_LEVEL_ADDITION_LEVEL, GAME_LEVEL_SUBSTRACT_LEVEL,
     GAME_LEVEL_MULTIPLICATION_LEVEL, GAME_LEVEL_DIVISION_LEVEL)
-from .sprites import PlayerSprite
+from .sprites import SpritePlayer
 from .utils import hollow_text, outlined_text, post_event, check_event, Timer
 from .vec2d import vec2d
 
@@ -41,7 +41,7 @@ class Game(object):
         self.enemy_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
         self.font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
         self.pause_sound = pygame.mixer.Sound('assets/sounds/pause.wav')
-        self.player_sprite = PlayerSprite(self)
+        self.player = SpritePlayer(self)
         pygame.display.set_caption(GAME_TITLE)
         self._current_level = None
         self.shake_screen = False
@@ -49,13 +49,13 @@ class Game(object):
         self.modes = {
             GAME_LEVEL_TITLE: TitleScreen(self),
             GAME_LEVEL_STORY: StoryLevel(self),
-            GAME_LEVEL_ADDITION_LEVEL: AdditionLevel(game=self, player=self.player_sprite),
-            GAME_LEVEL_ADDITION_BOSS: AdditionBossLevel(game=self, player=self.player_sprite),
-            GAME_LEVEL_SUBSTRACT_LEVEL: SubstractionLevel(game=self, player=self.player_sprite),
-            GAME_LEVEL_MULTIPLICATION_LEVEL: MultiplicationLevel(game=self, player=self.player_sprite),
-            GAME_LEVEL_DIVISION_LEVEL: DivisionLevel(game=self, player=self.player_sprite),
+            GAME_LEVEL_ADDITION_LEVEL: AdditionLevel(game=self, player=self.player),
+            GAME_LEVEL_ADDITION_BOSS: AdditionBossLevel(game=self, player=self.player),
+            GAME_LEVEL_SUBSTRACT_LEVEL: SubstractionLevel(game=self, player=self.player),
+            GAME_LEVEL_MULTIPLICATION_LEVEL: MultiplicationLevel(game=self, player=self.player),
+            GAME_LEVEL_DIVISION_LEVEL: DivisionLevel(game=self, player=self.player),
         }
-        post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_TITLE)
+        post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_ADDITION_BOSS)
 
     def get_current_level(self):
         return self.modes[self._current_level]

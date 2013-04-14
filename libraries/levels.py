@@ -6,7 +6,7 @@ from random import randint, choice
 import pygame
 
 from . import get_version
-from .events import (EVENT_GAME_OVER, EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP,
+from .events import (EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP,
     EVENT_STORY_SCRIPT_CAPTION, EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
     EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, EVENT_CHANGE_LEVEL)
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
@@ -16,7 +16,7 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     GAME_LEVEL_SUBSTRACT_LEVEL, GAME_LEVEL_MULTIPLICATION_LEVEL, GAME_LEVEL_DIVISION_LEVEL,
     GAME_LEVEL_TITLE, VERSION_TEXT, CREDITS_TEXT, TEXT_LEVEL_COMPLETE)
 from .maps import Map1, Map2, Map3, Map4
-from .sprites import DarkBossSprite, EnemyEyePod, EnemySprite, PlayerSprite, SpaceshipSprite
+from .sprites import EnemyArachnid, EnemyEyePod, EnemyFlyingBot, EnemyRedSlime, SpriteDarkBoss, SpriteSpaceship
 from .utils import check_event, hollow_text, outlined_text, post_event
 
 
@@ -52,7 +52,7 @@ class TitleScreen(Level):
     def on_start(self):
         pygame.mixer.music.load('assets/music/OveMelaaTranceBitBit.ogg')
         pygame.mixer.music.play(-1)
-        self.game.player_sprite.reset()
+        self.game.player.reset()
 
     def on_update(self):
         t = pygame.time.get_ticks()
@@ -92,7 +92,7 @@ class StoryLevel(Level):
         self.caption_letter = 0
 
         self.bio_ship_image = pygame.image.load('assets/enemies/bio_ship.png').convert()
-        self.bio_ship = SpaceshipSprite(self.game, image=self.bio_ship_image, speed=0.04)
+        self.bio_ship = SpriteSpaceship(self.game, image=self.bio_ship_image, speed=0.04)
         screen_size = self.game.surface.get_size()
         image = pygame.image.load('assets/backgrounds/earth.png').convert()
         self.title_image = background = pygame.transform.scale(image, (self.game.surface.get_size()[0], self.game.surface.get_size()[1]))
@@ -176,7 +176,7 @@ class PlayLevel(Level):
         screen_size = self.game.surface.get_size()
         self.game.can_be_paused = True
         self.mode = LEVEL_MODE_RUNNING
-        self.game.player_sprite.reset_position()
+        self.game.player.reset_position()
 
         if self.boss_level:
             origin_point = (randint(0, screen_size[0]), 0)
@@ -200,8 +200,6 @@ class PlayLevel(Level):
         if event.type == pygame.KEYDOWN:
             if self.mode == LEVEL_MODE_GAME_OVER and pygame.time.get_ticks() > self._time_player_death + 2500:
                 post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_TITLE)
-        elif event.type == EVENT_GAME_OVER:
-            self.game_over()
         else:
             result = check_event(event)
             #if result:
@@ -210,12 +208,12 @@ class PlayLevel(Level):
                     #self._current_level = result['mode']
                     #self.modes[self._current_level].on_start()
 
-        if self.player_sprite.is_alive():
-            self.player_sprite.on_event(event)
+        if self.player.is_alive():
+            self.player.on_event(event)
 
     def on_update(self):
         # Draw player
-        self.player_sprite.update(self.game.time_passed)
+        self.player.update(self.game.time_passed)
 
         # Update and redraw all enemies
         for enemy in self.enemies:
@@ -225,10 +223,10 @@ class PlayLevel(Level):
             self.boss.update(self.game.time_passed)
         else:
             if self.is_all_defeated():
-                if self.player_sprite.is_alive():
-                    self.player_sprite.score += self.stage_score_value
+                if self.player.is_alive():
+                    self.player.score += self.stage_score_value
                     post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_level)
-                #self.player_sprite.win_scroll()
+                #self.player.win_scroll()
 
         if self.mode == LEVEL_MODE_PLAYER_DEATH:
             if pygame.time.get_ticks() > self._time_player_death + 2000:
@@ -243,7 +241,7 @@ class PlayLevel(Level):
                 self.boss.on_explode()
 
             if pygame.time.get_ticks() > self._time_level_complete + 4000:
-                self.game.get_current_level().player_sprite.on_win_scroll()
+                self.game.get_current_level().player.on_win_scroll()
                 self.display_level_complete = True
 
             if pygame.time.get_ticks() > self._time_level_complete + 8000:
@@ -256,7 +254,7 @@ class PlayLevel(Level):
         # Redraw the background
         self.game.display_tile_map(self.map)
 
-        self.player_sprite.blit()
+        self.player.blit()
         if self.boss_level:
             self.boss.blit()
 
@@ -388,12 +386,11 @@ class AdditionLevel(PlayLevel):
     def __init__(self, player, **kwargs):
         super(self.__class__, self).__init__(**kwargs)
         self.map = Map1()
-        self.player_sprite = player
+        self.player = player
         self.enemy_class = EnemyEyePod
         self.stage_score_value = 100
         self.question_function = lambda: formula_generator(OPERATOR_ADD, digits_1=1, digits_2=1)
         self.enemy_count = 8
-        #self.next_level = GAME_LEVEL_SUBSTRACT_LEVEL
         self.next_level = GAME_LEVEL_ADDITION_BOSS
 
 
@@ -402,8 +399,8 @@ class AdditionBossLevel(PlayLevel):
         super(self.__class__, self).__init__(**kwargs)
         self.map = Map1()
         self.boss_level = True
-        self.player_sprite = player
-        self.boss_class = DarkBossSprite
+        self.player = player
+        self.boss_class = SpriteDarkBoss
         self.stage_score_value = 100
         self.question_function = lambda: formula_generator(OPERATOR_ADD, digits_1=1, digits_2=1)
         self.enemy_attack_points = 5
@@ -414,15 +411,11 @@ class SubstractionLevel(PlayLevel):
     def __init__(self, player, **kwargs):
         super(self.__class__, self).__init__(**kwargs)
         self.map = Map2()
-        self.player_sprite = player
-        self.enemy_images = EnemySprite.load_sliced_sprites(32, 32, 'enemies/redslime_strip.png')
+        self.player = player
+        self.enemy_class = EnemyRedSlime
         self.stage_score_value = 150
         self.question_function = lambda: formula_generator(OPERATOR_SUB, digits_1=1, digits_2=1, big_endian=True)
         self.enemy_count = 6
-        self.enemy_speed = 0.01
-        self.enemy_fps = 10
-        self.enemy_score_value = 150
-        self.enemy_attack_points = 10
         self.next_level = GAME_LEVEL_MULTIPLICATION_LEVEL
 
 
@@ -430,15 +423,11 @@ class MultiplicationLevel(PlayLevel):
     def __init__(self, player, **kwargs):
         super(self.__class__, self).__init__(**kwargs)
         self.map = Map3()
-        self.player_sprite = player
-        self.enemy_images = EnemySprite.load_sliced_sprites(32, 32, 'enemies/aracnid_strip.png')
+        self.player = player
+        self.enemy_class = EnemyArachnid
         self.stage_score_value = 200
         self.question_function = lambda: formula_generator(OPERATOR_MUL, digits_1=1, digits_2=1, even_1=True, even_2=True)
         self.enemy_count = 4
-        self.enemy_speed = 0.025
-        self.enemy_fps = 12
-        self.enemy_score_value = 200
-        self.enemy_attack_points = 15
         self.next_level = GAME_LEVEL_DIVISION_LEVEL
 
 
@@ -446,22 +435,18 @@ class DivisionLevel(PlayLevel):
     def __init__(self, player, **kwargs):
         super(self.__class__, self).__init__(**kwargs)
         self.map = Map4()
-        self.player_sprite = player
-        self.enemy_images = EnemySprite.load_sliced_sprites(32, 32, 'enemies/flying_bot_strip.png')
-        self.stage_score_value = 200
+        self.player = player
+        self.enemy_class = EnemyFlyingBot
+        self.stage_score_value = 250
         self.question_function = lambda: formula_generator(OPERATOR_DIV, digits_1=1, range_2=(1,2), even_1=True, even_2=True, big_endian=True)
         self.enemy_count = 2
-        self.enemy_speed = 0.05
-        self.enemy_fps = 14
-        self.enemy_score_value = 300
-        self.enemy_attack_points = 20
         self.next_level = GAME_LEVEL_TITLE
 
 
 class IntermissionLevel(Level):
     def setup(self):
         self.bio_ship_image = pygame.image.load('assets/enemies/bio_ship.png').convert()
-        self.bio_ship = SpaceshipSprite(self.game, image=self.bio_ship_image, speed=0.04)
+        self.bio_ship = SpriteSpaceship(self.game, image=self.bio_ship_image, speed=0.04)
         screen_size = self.game.surface.get_size()
         image = pygame.image.load('assets/backgrounds/earth.png').convert()
         self.title_image = background = pygame.transform.scale(image, (self.game.surface.get_size()[0], self.game.surface.get_size()[1]))

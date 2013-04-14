@@ -17,7 +17,7 @@ from .vec2d import vec2d
 INTERVAL_INVINCIBLE = 1000
 
 
-class CustomSprite(pygame.sprite.Sprite):
+class SpriteCustom(pygame.sprite.Sprite):
     @staticmethod
     def load_sliced_sprites(w, h, filename):
         images = []
@@ -29,7 +29,7 @@ class CustomSprite(pygame.sprite.Sprite):
         return images
 
 
-class PlayerSprite(CustomSprite):
+class SpritePlayer(SpriteCustom):
     def __init__(self, game, sex=SEX_MALE):
         pygame.sprite.Sprite.__init__(self)
         self.game = game
@@ -48,10 +48,10 @@ class PlayerSprite(CustomSprite):
         self.sex = sex
         self.speed = 0.08
         self.fps = 8
-        self.walk_down_images = PlayerSprite.load_sliced_sprites(34, 34, 'players/boy_walk_down_stripe.png')
-        self.walk_up_images = PlayerSprite.load_sliced_sprites(34, 34, 'players/boy_walk_up_stripe.png')
-        self.walk_left_images = PlayerSprite.load_sliced_sprites(34, 34, 'players/boy_walk_left_stripe.png')
-        self.walk_right_images = PlayerSprite.load_sliced_sprites(34, 34, 'players/boy_walk_right_stripe.png')
+        self.walk_down_images = SpritePlayer.load_sliced_sprites(34, 34, 'players/boy_walk_down_stripe.png')
+        self.walk_up_images = SpritePlayer.load_sliced_sprites(34, 34, 'players/boy_walk_up_stripe.png')
+        self.walk_left_images = SpritePlayer.load_sliced_sprites(34, 34, 'players/boy_walk_left_stripe.png')
+        self.walk_right_images = SpritePlayer.load_sliced_sprites(34, 34, 'players/boy_walk_right_stripe.png')
 
         self.reset()
 
@@ -261,7 +261,7 @@ class PlayerSprite(CustomSprite):
             return False
 
 
-class EnemySprite(CustomSprite):
+class SpriteEnemy(SpriteCustom):
     def __init__(self, game, font, question, answer, init_position):
         pygame.sprite.Sprite.__init__(self)
         self._start = pygame.time.get_ticks()
@@ -302,7 +302,7 @@ class EnemySprite(CustomSprite):
 
     def update(self, time_passed, force=False):
         # Re calculate direction to follow player
-        self.direction = (self.game.player_sprite.pos - self.pos).normalized()
+        self.direction = (self.game.player.pos - self.pos).normalized()
 
         if not self.game.paused:
             t = pygame.time.get_ticks()
@@ -327,7 +327,7 @@ class EnemySprite(CustomSprite):
                 self.pos += displacement
                 self.rect.topleft = [self.pos.x, self.pos.y]
 
-            player = self.game.get_current_level().player_sprite
+            player = self.game.get_current_level().player
 
             if pygame.sprite.collide_mask(self, player) and self.alive and player.is_alive():
                 player.take_damage(self)
@@ -363,15 +363,39 @@ class EnemySprite(CustomSprite):
             return False
 
 
-class EnemyEyePod(EnemySprite):
-    images = EnemySprite.load_sliced_sprites(32, 32, 'enemies/eye_pod_strip.png')
+class EnemyEyePod(SpriteEnemy):
+    images = SpriteEnemy.load_sliced_sprites(32, 32, 'enemies/eye_pod_strip.png')
     speed = 0.005
     fps = 8
     score_value = 100
     attack_points = 5
 
 
-class BossSprite(EnemySprite):
+class EnemyRedSlime(SpriteEnemy):
+    images = SpriteEnemy.load_sliced_sprites(32, 32, 'enemies/redslime_strip.png')
+    speed = 0.01
+    fps = 10
+    score_value = 150
+    attack_points = 10
+
+
+class EnemyArachnid(SpriteEnemy):
+    images = SpriteEnemy.load_sliced_sprites(32, 32, 'enemies/aracnid_strip.png')
+    speed = 0.025
+    fps = 12
+    score_value = 200
+    attack_points = 15
+
+
+class EnemyFlyingBot(SpriteEnemy):
+    images = SpriteEnemy.load_sliced_sprites(32, 32, 'enemies/flying_bot_strip.png')
+    speed = 0.05
+    fps = 14
+    score_value = 300
+    attack_points = 20
+
+
+class SpriteBoss(SpriteEnemy):
     def __init__(self, game, font, init_position):
         pygame.sprite.Sprite.__init__(self)
         self.image = self.images[0]
@@ -397,7 +421,7 @@ class BossSprite(EnemySprite):
 
     def update(self, time_passed, force=False):
         # Re calculate direction to follow player
-        #self.direction = (self.game.player_sprite.pos - self.pos).normalized()
+        #self.direction = (self.game.player.pos - self.pos).normalized()
 
         if self._state == ENEMY_STATE_ALIVE:
             if pygame.time.get_ticks() > self._move_time + 1000:
@@ -416,6 +440,7 @@ class BossSprite(EnemySprite):
         if self._state == ENEMY_STATE_HIT:
             if pygame.time.get_ticks() > self._time_hit + 500:
                 self._state = ENEMY_STATE_ALIVE
+                self.direction = self.old_direction
                 self._move_time = pygame.time.get_ticks()
 
         if self.alive:
@@ -442,8 +467,8 @@ class BossSprite(EnemySprite):
                 self.pos.y = bounds_rect.bottom
                 self.direction.y *= -1
 
-            if pygame.sprite.collide_mask(self, self.game.get_current_level().player_sprite) and self.alive:
-                self.game.get_current_level().player_sprite.take_damage(self)
+            if pygame.sprite.collide_mask(self, self.game.get_current_level().player) and self.alive:
+                self.game.get_current_level().player.take_damage(self)
 
     def blit(self):
         self.game.surface.blit(self.image, (self.pos.x, self.pos.y))
@@ -466,7 +491,9 @@ class BossSprite(EnemySprite):
     def check_hit(self, answer):
         for enemy in self.game.get_current_level().enemies:
             if enemy.check_hit(answer):
+                self.old_direction = self.direction
                 self.sound_hit.play()
+                self.direction = vec2d(0, 0)
                 self._state = ENEMY_STATE_HIT
                 self.image = self.images[2]
                 self._time_hit = pygame.time.get_ticks()
@@ -475,7 +502,7 @@ class BossSprite(EnemySprite):
                     self.hit_points = 0
                     self._state = ENEMY_STATE_DEFEATED
                     self.game.get_current_level().on_level_complete()
-                    self.direction = vec2d(0, 0)  # To the right
+                    self.direction = vec2d(0, 0)
                     self.game.get_current_level().on_level_complete()
 
     def defeat(self, enemies):
@@ -495,8 +522,8 @@ class BossSprite(EnemySprite):
             self.sound_death.play()
 
 
-class DarkBossSprite(BossSprite):
-    images = EnemySprite.load_sliced_sprites(122, 110, 'enemies/dark_boss_strip.png')
+class SpriteDarkBoss(SpriteBoss):
+    images = SpriteEnemy.load_sliced_sprites(122, 110, 'enemies/dark_boss_strip.png')
     values = 5000
     attack_points = 115
     speed = 0.1
@@ -504,7 +531,7 @@ class DarkBossSprite(BossSprite):
     total_hit_points = 25
 
 
-class SpaceshipSprite(pygame.sprite.Sprite):
+class SpriteSpaceship(pygame.sprite.Sprite):
     def __init__(self, game, image, speed):
         pygame.sprite.Sprite.__init__(self)
         self.image = image
