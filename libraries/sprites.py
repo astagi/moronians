@@ -283,7 +283,7 @@ class SpritePlayer(SpriteCustom):
 
 
 class SpriteEnemy(SpriteCustom):
-    def __init__(self, game, font, question, answer, init_position):
+    def __init__(self, game, font, question, answer, init_position, speed=None):
         pygame.sprite.Sprite.__init__(self)
         self._start = pygame.time.get_ticks()
         self._delay = 1000 / self.fps
@@ -298,8 +298,9 @@ class SpriteEnemy(SpriteCustom):
         self.alive = True
         self.loop = True
         self.state = ENEMY_STATE_ALIVE
-
         self.pos = vec2d(init_position)
+        if speed:
+            self.speed = speed
         self.smoke_images = [
             pygame.image.load('assets/explosions/smoke_puff/smoke_puff_0001.32x32.png'),
             pygame.image.load('assets/explosions/smoke_puff/smoke_puff_0002.32x32.png'),
@@ -453,7 +454,7 @@ class SpriteBoss(SpriteEnemy):
                 self.image = self.images[0]
                 self._state = ENEMY_STATE_ALIVE
                 self._move_time = pygame.time.get_ticks()
-                self.game.get_current_level().spawn_enemy(EnemyEyePod, origin_point=(self.pos[0] + self.image.get_size()[0] / 2, self.pos[1] + self.image.get_size()[1]))
+                self.game.get_current_level().spawn_enemy(EnemyEyePod, origin_point=(self.pos[0] + self.image.get_size()[0] / 2, self.pos[1] + self.image.get_size()[1]), speed=EnemyEyePod.speed * 10)
             else:
                 self.image = self.images[1]
 
@@ -548,8 +549,7 @@ class SpriteDarkBoss(SpriteBoss):
     values = 5000
     attack_points = 115
     speed = 0.1
-    hit_points = 25
-    total_hit_points = 25
+    hit_points = total_hit_points = 50
 
 
 class SpriteSpaceship(pygame.sprite.Sprite):

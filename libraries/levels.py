@@ -190,12 +190,12 @@ class PlayLevel(Level):
                 #self.enemies.append(self.sprite_class(self.game, self.game.enemy_font, question, answer, origin_point, self.enemy_speed, self.enemy_images, self.enemy_fps, self.enemy_score_value, self.enemy_attack_points))
                 self.spawn_enemy(self.enemy_class)
 
-    def spawn_enemy(self, enemy_class, origin_point=None):
+    def spawn_enemy(self, enemy_class, origin_point=None, speed=None):
         if not origin_point:
             screen_size = self.game.surface.get_size()
             origin_point = (randint(0, screen_size[0]), randint(0, screen_size[1]))
         question, answer = self.question_function()
-        self.enemies.append(enemy_class(self.game, self.game.enemy_font, question, answer, origin_point))
+        self.enemies.append(enemy_class(self.game, self.game.enemy_font, question, answer, origin_point, speed=speed))
 
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
