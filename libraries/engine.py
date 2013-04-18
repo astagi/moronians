@@ -17,7 +17,8 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     DEFAULT_SCREENSIZE, GAME_LEVEL_ADDITION_BOSS, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT,
     PAUSE_TEXT_VERTICAL_OFFSET, START_MESSAGE_TEXT, STORY_TEXT, GAME_LEVEL_TITLE,
     GAME_LEVEL_STORY, GAME_LEVEL_ADDITION_LEVEL, GAME_LEVEL_SUBSTRACT_LEVEL,
-    GAME_LEVEL_MULTIPLICATION_LEVEL, GAME_LEVEL_DIVISION_LEVEL)
+    GAME_LEVEL_MULTIPLICATION_LEVEL, GAME_LEVEL_DIVISION_LEVEL, TEXT_EXIT_CONFIRMATION,
+    EXIT_TEXT_VERTICAL_OFFSET)
 from .sprites import SpritePlayer
 from .utils import hollow_text, outlined_text, post_event, check_event, Timer
 from .vec2d import vec2d
@@ -26,10 +27,11 @@ logger = logging.getLogger(__name__)
 
 
 class Game(object):
-    def __init__(self):
-        self.paused = False
+    def __init__(self, debug=False):
         self.running = False
-        self.can_be_paused = False
+        self.paused = False
+        self.finish = False
+        self.debug = debug
 
     def on_init(self):
         pygame.init()
@@ -45,6 +47,8 @@ class Game(object):
         pygame.display.set_caption(GAME_TITLE)
         self._current_level = None
         self.shake_screen = False
+        self.can_be_paused = False
+        self.exit_confirm = False
 
         self.modes = {
             GAME_LEVEL_TITLE: TitleScreen(self),
@@ -65,11 +69,25 @@ class Game(object):
             self.exit_game()
         elif event.type == pygame.KEYDOWN:
             # Check for control keys first
-            if event.key == pygame.K_ESCAPE:
-                self.exit_game()
+            if self.exit_confirm:
+                if event.key in [pygame.K_ESCAPE, ord('n'), ord('N')]:
+                    self.exit_confirm = False
+                    self.can_be_pause = True
+                    raise SwallowEvent
+                elif event.key in [ord('y'), ord('Y')]:
+                    self.exit_game()
+            elif event.key == pygame.K_ESCAPE:
+                if self._current_level == GAME_LEVEL_TITLE:
+                    self.exit_game()
+                elif self._current_level in [GAME_LEVEL_ADDITION_LEVEL, GAME_LEVEL_ADDITION_BOSS,
+                                   GAME_LEVEL_SUBSTRACT_LEVEL, GAME_LEVEL_MULTIPLICATION_LEVEL,
+                                   GAME_LEVEL_DIVISION_LEVEL]:
+                    self.can_be_pause = False
+                    self.exit_confirm = True
             elif event.key == pygame.K_PAUSE and self.can_be_paused:
                 # Get next event, thus emulate swallowing this one
                 self.paused = not self.paused
+                self.running = not self.running
                 if self.paused:
                     pygame.mixer.music.pause()
                     self.pause_sound.play()
@@ -88,8 +106,7 @@ class Game(object):
     def run(self):
         self.on_init()
 
-        self.running = True
-        while self.running:
+        while not self.finish:
             self.time_passed = self.clock.tick(60)
 
             for event in pygame.event.get():
@@ -111,6 +128,10 @@ class Game(object):
 
     def on_blit(self):
         self.modes[self._current_level].blit()
+
+        if self.exit_confirm:
+            self.exit_confirmation(self.pause_font)
+
         if self.paused:
             self.display_pause_label(self.pause_font)
 
@@ -133,6 +154,10 @@ class Game(object):
         text_size = font.size(PAUSE_TEXT)
         self.surface.blit(font.render(PAUSE_TEXT, 1, COLOR_WHITE), (self._screen.get_width() / 2 - text_size[0] / 2, self._screen.get_height() / 2 - text_size[1] / 2 - PAUSE_TEXT_VERTICAL_OFFSET))
 
+    def exit_confirmation(self, font):
+        text_size = font.size(TEXT_EXIT_CONFIRMATION)
+        self.surface.blit(font.render(TEXT_EXIT_CONFIRMATION, 1, COLOR_WHITE), (self._screen.get_width() / 2 - text_size[0] / 2, self._screen.get_height() / 2 - text_size[1] / 2 - EXIT_TEXT_VERTICAL_OFFSET))
+
     def display_tile_map(self, map):
         #loops through map to set background
         for y in range(len(map.grid)):
@@ -141,5 +166,5 @@ class Game(object):
                 self.surface.blit(map.tileset, location, map.grid[y][x])
 
     def exit_game(self):
-        self.running = False
+        self.finish = True
         pygame.display.set_mode(DEFAULT_SCREENSIZE, pygame.HWSURFACE | pygame.DOUBLEBUF)

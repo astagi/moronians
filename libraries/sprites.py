@@ -55,6 +55,7 @@ class SpritePlayer(SpriteCustom):
         self.walk_left_images = SpritePlayer.load_sliced_sprites(34, 34, 'players/boy_walk_left_stripe.png')
         self.walk_right_images = SpritePlayer.load_sliced_sprites(34, 34, 'players/boy_walk_right_stripe.png')
         self.visible = True
+        self._invincible_initial_time = 0
 
         self.reset()
 
@@ -119,7 +120,10 @@ class SpritePlayer(SpriteCustom):
                 self._images = self.walk_left_images
 
     def update(self, time_passed, force=False):
-        if not self.game.paused and self.is_alive():
+        if not self.game.running:
+            self._invincible_initial_time += time_passed
+
+        if self.game.running and self.is_alive():
             keys_pressed = pygame.key.get_pressed()
 
             direction_y = 0
@@ -635,25 +639,29 @@ class SpritePowerUp(pygame.sprite.Sprite):
         self._time_initial = 0
 
     def on_update(self, time_passed):
+        if not self.game.running:
+            self._time_initial += time_passed
+
         self.effect()
 
-        if not self.active:
-            if self.chance():
-                self._time_initial = pygame.time.get_ticks()
-                self.active = True
-                surface_size = self.game.surface.get_size()
-                self.pos = (randint(0, surface_size[0] - self.image.get_size()[0]), randint(0, surface_size[1] - self.image.get_size()[0]))
-                self.rect = self.image.get_rect()
-                self.size = self.image.get_size()
-                self.rect.topleft = [self.pos[0], self.pos[1]]
-        if self.active:
-            if pygame.time.get_ticks() > self._time_initial + 6000:
-                self.active = False
-            else:
-                if pygame.sprite.collide_mask(self, self.game.player):
+        if self.game.running:
+            if not self.active:
+                if self.chance():
+                    self._time_initial = pygame.time.get_ticks()
+                    self.active = True
+                    surface_size = self.game.surface.get_size()
+                    self.pos = (randint(0, surface_size[0] - self.image.get_size()[0]), randint(0, surface_size[1] - self.image.get_size()[0]))
+                    self.rect = self.image.get_rect()
+                    self.size = self.image.get_size()
+                    self.rect.topleft = [self.pos[0], self.pos[1]]
+            if self.active:
+                if pygame.time.get_ticks() > self._time_initial + 6000:
                     self.active = False
-                    self.sound.play()
-                    self.collision()
+                else:
+                    if pygame.sprite.collide_mask(self, self.game.player):
+                        self.active = False
+                        self.sound.play()
+                        self.collision()
 
     def blit(self):
         if self.active:
