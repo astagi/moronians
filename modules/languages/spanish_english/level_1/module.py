@@ -33,7 +33,7 @@ class AdditionLevel(PlayLevel):
         super(self.__class__, self).__init__(**kwargs)
         self.map = Map1()
         self.player = player
-        self.enemy_class = EnemyEyePod
+        self.enemy_class = EnemyRedSlime
         self.stage_score_value = 100
         self.question_function = lambda: pair_generator(word_list_spanish_english)
         self.enemy_count = 8
