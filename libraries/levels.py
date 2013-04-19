@@ -10,14 +10,13 @@ from .events import (EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP,
     EVENT_STORY_SCRIPT_CAPTION, EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
     EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, EVENT_CHANGE_LEVEL)
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
-    DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, GAME_LEVEL_ADDITION_BOSS, PAUSE_TEXT,
+    DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT,
     PAUSE_TEXT_VERTICAL_OFFSET,
-    START_MESSAGE_TEXT, STORY_TEXT, GAME_LEVEL_STORY, GAME_LEVEL_ADDITION_LEVEL,
-    GAME_LEVEL_SUBSTRACT_LEVEL, GAME_LEVEL_MULTIPLICATION_LEVEL, GAME_LEVEL_DIVISION_LEVEL,
-    GAME_LEVEL_TITLE, VERSION_TEXT, CREDITS_TEXT, TEXT_LEVEL_COMPLETE)
-from .maps import Map1, Map2, Map3, Map4
-from .sprites import (EnemyArachnid, EnemyEyePod, EnemyFlyingBot, EnemyRedSlime,
-    PowerUpApple, PowerUpShield, SpriteDarkBoss, SpriteSpaceship)
+    START_MESSAGE_TEXT, STORY_TEXT, GAME_LEVEL_STORY,
+    GAME_LEVEL_TITLE, GAME_LEVEL_FIRST, VERSION_TEXT, CREDITS_TEXT, TEXT_LEVEL_COMPLETE,
+    LEVEL_MODE_STOPPED, LEVEL_MODE_RUNNING, LEVEL_MODE_COMPLETE,
+    LEVEL_MODE_PLAYER_DEATH, LEVEL_MODE_GAME_OVER)
+from .sprites import PowerUpApple, PowerUpShield, SpriteSpaceship
 from .utils import check_event, hollow_text, outlined_text, post_event
 
 
@@ -112,7 +111,7 @@ class StoryLevel(Level):
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
             pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 0)
-            post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_ADDITION_LEVEL)
+            post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_FIRST)
         elif event.type == EVENT_STORY_SCRIPT_CAPTION:
             pygame.time.set_timer(EVENT_STORY_SCRIPT_CAPTION, 0)
             pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 150)
@@ -145,12 +144,6 @@ class StoryLevel(Level):
             pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 0)
             pygame.time.set_timer(EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, 2000)
 
-
-LEVEL_MODE_STOPPED = 0
-LEVEL_MODE_RUNNING = 1
-LEVEL_MODE_COMPLETE = 2
-LEVEL_MODE_PLAYER_DEATH = 3
-LEVEL_MODE_GAME_OVER = 4
 
 class PlayLevel(Level):
     def __init__(self, game):
@@ -326,130 +319,6 @@ class PlayLevel(Level):
         if self.boss_level:
             self._time_level_complete = pygame.time.get_ticks()
             self.game.shake_screen = True
-
-word_list_spanish_english = [
-#    (chr(32), 'airplane'),
-    ('avion', 'airplane'),
-    ('rojo', 'red'),
-    ('azul', 'blue'),
-    ('ayer', 'yesterday'),
-    ('jugar', 'play'),
-    ('foto', 'photo'),
-    ('padre', 'father'),
-    ('madre', 'mother'),
-    ('abuelo', 'grandfather'),
-    ('abuela', 'grandmother'),
-]
-
-
-def pair_generator(word_list):
-    return choice(word_list)
-
-
-OPERATOR_ADD = 1
-OPERATOR_SUB = 2
-OPERATOR_MUL = 3
-OPERATOR_DIV = 4
-
-
-def formula_generator(operation, digits_1=1, digits_2=1, range_1=None, range_2=None, even_1=False, even_2=False, big_endian=False):
-    if range_1:
-        low_limit_1, high_limit_1 = range_1
-    else:
-        low_limit_1 = 10 ** (digits_1 - 1)
-        high_limit_1 = 10 ** digits_1 - 1
-
-    if range_2:
-        low_limit_2, high_limit_2 = range_2
-    else:
-        low_limit_2 = 10 ** (digits_2 - 1)
-        high_limit_2 = 10 ** digits_2 - 1
-
-    if operation == OPERATOR_DIV and low_limit_2 == 0:
-        # Avoid generating a div by zero
-        low_limit_2 = 1
-
-    first_number = randint(low_limit_1, high_limit_1)
-    second_number = randint(low_limit_2, high_limit_2)
-
-    if even_1 and first_number % 2 != 0:
-        first_number += 1
-
-    if even_2 and second_number % 2 != 0:
-        second_number += 1
-
-    if big_endian and second_number > first_number:
-        return formula_generator(operation, digits_1, digits_2, range_1, range_2, even_1, even_2, big_endian)
-
-    if operation == OPERATOR_ADD:
-        return '%d + %d' % (first_number, second_number), str(first_number + second_number)
-    elif operation == OPERATOR_SUB:
-        return '%d - %d' % (first_number, second_number), str(first_number - second_number)
-    elif operation == OPERATOR_MUL:
-        return '%d * %d' % (first_number, second_number), str(first_number * second_number)
-    elif operation == OPERATOR_DIV:
-        return '%d / %d' % (first_number, second_number), str(first_number / second_number)
-
-
-class AdditionLevel(PlayLevel):
-    def __init__(self, player, **kwargs):
-        super(self.__class__, self).__init__(**kwargs)
-        self.map = Map1()
-        self.player = player
-        self.enemy_class = EnemyEyePod
-        self.stage_score_value = 100
-        self.question_function = lambda: formula_generator(OPERATOR_ADD, digits_1=1, digits_2=1)
-        self.enemy_count = 8
-        self.next_level = GAME_LEVEL_ADDITION_BOSS
-
-
-class AdditionBossLevel(PlayLevel):
-    def __init__(self, player, **kwargs):
-        super(self.__class__, self).__init__(**kwargs)
-        self.map = Map1()
-        self.boss_level = True
-        self.player = player
-        self.boss_class = SpriteDarkBoss
-        self.stage_score_value = 100
-        self.question_function = lambda: formula_generator(OPERATOR_ADD, digits_1=1, digits_2=1)
-        self.enemy_attack_points = 5
-        self.next_level = GAME_LEVEL_SUBSTRACT_LEVEL
-
-
-class SubstractionLevel(PlayLevel):
-    def __init__(self, player, **kwargs):
-        super(self.__class__, self).__init__(**kwargs)
-        self.map = Map2()
-        self.player = player
-        self.enemy_class = EnemyRedSlime
-        self.stage_score_value = 150
-        self.question_function = lambda: formula_generator(OPERATOR_SUB, digits_1=1, digits_2=1, big_endian=True)
-        self.enemy_count = 6
-        self.next_level = GAME_LEVEL_MULTIPLICATION_LEVEL
-
-
-class MultiplicationLevel(PlayLevel):
-    def __init__(self, player, **kwargs):
-        super(self.__class__, self).__init__(**kwargs)
-        self.map = Map3()
-        self.player = player
-        self.enemy_class = EnemyArachnid
-        self.stage_score_value = 200
-        self.question_function = lambda: formula_generator(OPERATOR_MUL, digits_1=1, digits_2=1, even_1=True, even_2=True)
-        self.enemy_count = 4
-        self.next_level = GAME_LEVEL_DIVISION_LEVEL
-
-
-class DivisionLevel(PlayLevel):
-    def __init__(self, player, **kwargs):
-        super(self.__class__, self).__init__(**kwargs)
-        self.map = Map4()
-        self.player = player
-        self.enemy_class = EnemyFlyingBot
-        self.stage_score_value = 250
-        self.question_function = lambda: formula_generator(OPERATOR_DIV, digits_1=1, range_2=(1,2), even_1=True, even_2=True, big_endian=True)
-        self.enemy_count = 2
-        self.next_level = GAME_LEVEL_TITLE
 
 
 class IntermissionLevel(Level):

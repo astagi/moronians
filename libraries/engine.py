@@ -11,13 +11,11 @@ from .exceptions import SwallowEvent
 from .events import (EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, EVENT_STORY_SCRIPT_CAPTION,
     EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
     EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, EVENT_CHANGE_LEVEL)
-from .levels import (AdditionLevel, AdditionBossLevel, DivisionLevel, MultiplicationLevel,
-    StoryLevel, SubstractionLevel, TitleScreen)
+from .levels import StoryLevel, TitleScreen
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
-    DEFAULT_SCREENSIZE, GAME_LEVEL_ADDITION_BOSS, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT,
+    DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT,
     PAUSE_TEXT_VERTICAL_OFFSET, START_MESSAGE_TEXT, STORY_TEXT, GAME_LEVEL_TITLE,
-    GAME_LEVEL_STORY, GAME_LEVEL_ADDITION_LEVEL, GAME_LEVEL_SUBSTRACT_LEVEL,
-    GAME_LEVEL_MULTIPLICATION_LEVEL, GAME_LEVEL_DIVISION_LEVEL, TEXT_EXIT_CONFIRMATION,
+    GAME_LEVEL_STORY, TEXT_EXIT_CONFIRMATION,
     EXIT_TEXT_VERTICAL_OFFSET)
 from .sprites import SpritePlayer
 from .utils import hollow_text, outlined_text, post_event, check_event, Timer
@@ -25,6 +23,8 @@ from .vec2d import vec2d
 
 logger = logging.getLogger(__name__)
 
+
+from modules.math.level_1.module import Module
 
 class Game(object):
     def __init__(self, debug=False):
@@ -49,20 +49,11 @@ class Game(object):
         self.shake_screen = False
         self.can_be_paused = False
         self.exit_confirm = False
-
-        self.modes = {
-            GAME_LEVEL_TITLE: TitleScreen(self),
-            GAME_LEVEL_STORY: StoryLevel(self),
-            GAME_LEVEL_ADDITION_LEVEL: AdditionLevel(game=self, player=self.player),
-            GAME_LEVEL_ADDITION_BOSS: AdditionBossLevel(game=self, player=self.player),
-            GAME_LEVEL_SUBSTRACT_LEVEL: SubstractionLevel(game=self, player=self.player),
-            GAME_LEVEL_MULTIPLICATION_LEVEL: MultiplicationLevel(game=self, player=self.player),
-            GAME_LEVEL_DIVISION_LEVEL: DivisionLevel(game=self, player=self.player),
-        }
-        post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_TITLE)
+        self.module = Module(self)
+        self.module.on_start()
 
     def get_current_level(self):
-        return self.modes[self._current_level]
+        return self.module.modes[self._current_level]
 
     def on_event(self, event):
         if event.type == pygame.QUIT:
@@ -79,9 +70,7 @@ class Game(object):
             elif event.key == pygame.K_ESCAPE:
                 if self._current_level == GAME_LEVEL_TITLE:
                     self.exit_game()
-                elif self._current_level in [GAME_LEVEL_ADDITION_LEVEL, GAME_LEVEL_ADDITION_BOSS,
-                                   GAME_LEVEL_SUBSTRACT_LEVEL, GAME_LEVEL_MULTIPLICATION_LEVEL,
-                                   GAME_LEVEL_DIVISION_LEVEL]:
+                elif self._current_level != GAME_LEVEL_STORY:
                     self.can_be_pause = False
                     self.exit_confirm = True
             elif event.key == pygame.K_PAUSE and self.can_be_paused:
@@ -101,7 +90,7 @@ class Game(object):
             #print 'MORONIAN EVENT', result
             if result['event'] == EVENT_CHANGE_LEVEL:
                 self._current_level = result['mode']
-                self.modes[self._current_level].on_start()
+                self.module.modes[self._current_level].on_start()
 
     def run(self):
         self.on_init()
@@ -116,7 +105,7 @@ class Game(object):
                     pass
                 else:
                     if not self._current_level is None:
-                        self.modes[self._current_level].on_event(event)
+                        self.module.modes[self._current_level].on_event(event)
 
             self.on_loop()
             self.on_blit()
@@ -124,10 +113,10 @@ class Game(object):
 
     def on_loop(self):
         Timer.check_expired()
-        self.modes[self._current_level].on_update()
+        self.module.modes[self._current_level].on_update()
 
     def on_blit(self):
-        self.modes[self._current_level].blit()
+        self.module.modes[self._current_level].blit()
 
         if self.exit_confirm:
             self.exit_confirmation(self.pause_font)
