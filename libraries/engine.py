@@ -20,18 +20,22 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
 from .sprites import SpritePlayer
 from .utils import hollow_text, outlined_text, post_event, check_event, Timer
 from .vec2d import vec2d
+from utils.importlib import import_module
 
 logger = logging.getLogger(__name__)
 
 
-from modules.math.level_1.module import Module
-
 class Game(object):
-    def __init__(self, debug=False):
+    def __init__(self, module_name, debug=False):
         self.running = False
         self.paused = False
         self.finish = False
         self.debug = debug
+        #try:
+        self.module_class = import_module('modules.%s.module' % module_name).Module
+        #except ImportError:
+        #    print 'Unable to import module %s' % module_name
+        #    exit(1)
 
     def on_init(self):
         pygame.init()
@@ -49,7 +53,7 @@ class Game(object):
         self.shake_screen = False
         self.can_be_paused = False
         self.exit_confirm = False
-        self.module = Module(self)
+        self.module = self.module_class(self)
         self.module.on_start()
 
     def get_current_level(self):

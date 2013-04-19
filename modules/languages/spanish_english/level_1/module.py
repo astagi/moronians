@@ -8,7 +8,7 @@ from libraries.utils import hollow_text, outlined_text, post_event, check_event,
 
 from modules.classes import ModuleBase
 
-from .generators import formula_generator
+from .generators import pair_generator, word_list_spanish_english
 from .literals import (GAME_LEVEL_ADDITION_BOSS, GAME_LEVEL_ADDITION_LEVEL,
     GAME_LEVEL_SUBSTRACT_LEVEL, GAME_LEVEL_MULTIPLICATION_LEVEL, GAME_LEVEL_DIVISION_LEVEL,
     OPERATOR_ADD, OPERATOR_SUB, OPERATOR_MUL, OPERATOR_DIV)
@@ -35,7 +35,7 @@ class AdditionLevel(PlayLevel):
         self.player = player
         self.enemy_class = EnemyEyePod
         self.stage_score_value = 100
-        self.question_function = lambda: formula_generator(OPERATOR_ADD, digits_1=1, digits_2=1)
+        self.question_function = lambda: pair_generator(word_list_spanish_english)
         self.enemy_count = 8
         self.next_level = GAME_LEVEL_ADDITION_BOSS
 
@@ -48,7 +48,7 @@ class AdditionBossLevel(PlayLevel):
         self.player = player
         self.boss_class = SpriteDarkBoss
         self.stage_score_value = 100
-        self.question_function = lambda: formula_generator(OPERATOR_ADD, digits_1=1, digits_2=1)
+        self.question_function = lambda: pair_generator(word_list_spanish_english)
         self.enemy_attack_points = 5
         self.next_level = GAME_LEVEL_SUBSTRACT_LEVEL
 
@@ -60,7 +60,7 @@ class SubstractionLevel(PlayLevel):
         self.player = player
         self.enemy_class = EnemyRedSlime
         self.stage_score_value = 150
-        self.question_function = lambda: formula_generator(OPERATOR_SUB, digits_1=1, digits_2=1, big_endian=True)
+        self.question_function = lambda: pair_generator(word_list_spanish_english)
         self.enemy_count = 6
         self.next_level = GAME_LEVEL_MULTIPLICATION_LEVEL
 
@@ -72,7 +72,7 @@ class MultiplicationLevel(PlayLevel):
         self.player = player
         self.enemy_class = EnemyArachnid
         self.stage_score_value = 200
-        self.question_function = lambda: formula_generator(OPERATOR_MUL, digits_1=1, digits_2=1, even_1=True, even_2=True)
+        self.question_function = lambda: pair_generator(word_list_spanish_english)
         self.enemy_count = 4
         self.next_level = GAME_LEVEL_DIVISION_LEVEL
 
@@ -84,6 +84,6 @@ class DivisionLevel(PlayLevel):
         self.player = player
         self.enemy_class = EnemyFlyingBot
         self.stage_score_value = 250
-        self.question_function = lambda: formula_generator(OPERATOR_DIV, digits_1=1, range_2=(1,2), even_1=True, even_2=True, big_endian=True)
+        self.question_function = lambda: pair_generator(word_list_spanish_english)
         self.enemy_count = 2
         self.next_level = GAME_LEVEL_TITLE
