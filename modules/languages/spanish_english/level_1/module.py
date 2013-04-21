@@ -4,7 +4,7 @@ from libraries.literals import GAME_LEVEL_TITLE, GAME_LEVEL_STORY
 from libraries.maps import Map1, Map2, Map3, Map4
 from libraries.sprites import (EnemyArachnid, EnemyEyePod, EnemyFlyingBot, EnemyRedSlime,
     PowerUpApple, PowerUpShield, SpriteDarkBoss)
-from libraries.stages import StoryStage
+from libraries.stages import StoryStage, StagePlanetTravel
 from libraries.utils import hollow_text, outlined_text, post_event, check_event, Timer
 
 from modules.classes import ModuleBase
@@ -12,21 +12,28 @@ from modules.classes import ModuleBase
 from .generators import pair_generator, word_list_spanish_english
 from .literals import (GAME_LEVEL_ADDITION_BOSS, GAME_LEVEL_ADDITION_LEVEL,
     GAME_LEVEL_SUBSTRACT_LEVEL, GAME_LEVEL_MULTIPLICATION_LEVEL, GAME_LEVEL_DIVISION_LEVEL,
-    OPERATOR_ADD, OPERATOR_SUB, OPERATOR_MUL, OPERATOR_DIV)
+    GAME_LEVEL_TRAVEL, GAME_LEVEL_STORY, OPERATOR_ADD, OPERATOR_SUB, OPERATOR_MUL, OPERATOR_DIV,
+    TEXT_PLANET_01_NAME)
 
 
 class Module(ModuleBase):
     def __init__(self, game):
         self.game = game
         self.modes = {
-            GAME_LEVEL_TITLE: TitleScreen(game),
-            GAME_LEVEL_STORY: StoryStage(game),
+            GAME_LEVEL_TITLE: TitleScreen(game, next_level=GAME_LEVEL_STORY),
+            GAME_LEVEL_STORY: StoryStage(game, next_level=GAME_LEVEL_TRAVEL),
+            GAME_LEVEL_TRAVEL: StageFirenius(game, next_level=GAME_LEVEL_ADDITION_LEVEL),
             GAME_LEVEL_ADDITION_LEVEL: AdditionLevel(game=game, player=game.player),
             GAME_LEVEL_ADDITION_BOSS: AdditionBossLevel(game=game, player=game.player),
             GAME_LEVEL_SUBSTRACT_LEVEL: SubstractionLevel(game=game, player=game.player),
             GAME_LEVEL_MULTIPLICATION_LEVEL: MultiplicationLevel(game=game, player=game.player),
             GAME_LEVEL_DIVISION_LEVEL: DivisionLevel(game=game, player=game.player),
         }
+
+
+class StageFirenius(StagePlanetTravel):
+    planet_name = TEXT_PLANET_01_NAME
+    background_file = 'assets/backgrounds/planet_1_0.png'
 
 
 class AdditionLevel(PlayLevel):

@@ -39,7 +39,7 @@ class Level(object):
 
 
 class TitleScreen(Level):
-    def __init__(self, game):
+    def __init__(self, game, next_level=None):
         self.game = game
         image = pygame.image.load('assets/backgrounds/game_title.png').convert()
         self.title_image = background = pygame.transform.scale(image, (self.game.surface.get_size()[0], self.game.surface.get_size()[1]))
@@ -49,6 +49,8 @@ class TitleScreen(Level):
         self.version_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 9)
         self.title_delay = 1000 / 5  # 5 FPS
         self.title_last_update = 0
+        if next_level:
+            self.next_level = next_level
 
     def on_start(self):
         pygame.mixer.music.load('assets/music/OveMelaaTranceBitBit.ogg')
@@ -81,14 +83,15 @@ class TitleScreen(Level):
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN:
-                post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_STORY)
+                pygame.mixer.music.stop()
+                post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_level)
 
     def on_exit(self):
         pygame.mixer.music.stop()
 
 
 class PlayLevel(Level):
-    def __init__(self, game):
+    def __init__(self, game, next_level=None):
         self.game = game
         self.game_over_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 32)
         self.result = []
@@ -98,6 +101,8 @@ class PlayLevel(Level):
         self.display_game_over = False
         self.display_level_complete = False
         self.powerups = [PowerUpApple(self.game), PowerUpShield(self.game)]
+        if next_level:
+            self.next_level = next_level
 
     def on_start(self):
         if self.boss_level:
@@ -188,7 +193,7 @@ class PlayLevel(Level):
                 self.display_level_complete = True
 
             if pygame.time.get_ticks() > self._time_level_complete + 10000:
-                post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_TITLE)
+                post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_level)
 
     def blit(self):
         # Redraw the background
@@ -215,7 +220,6 @@ class PlayLevel(Level):
                 text_size = self.game_over_font.size(TEXT_LEVEL_COMPLETE)
                 label = outlined_text(self.game_over_font, TEXT_LEVEL_COMPLETE, COLOR_WHITE, COLOR_ALMOST_BLACK)
                 self.game.surface.blit(label, (self.game.surface.get_size()[0] / 2 - text_size[0] / 2, self.game.surface.get_size()[1] / 2 - 90))
-
 
     def on_game_over(self):
         self.game.can_be_paused = False

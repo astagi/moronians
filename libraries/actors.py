@@ -9,7 +9,7 @@ class Actor(pygame.sprite.Sprite):
     def __init__(self, stage):
         pygame.sprite.Sprite.__init__(self)
         self._visible = False
-        self.image = pygame.image.load(self.image_file).convert_alpha()
+        self.image = self.image_original = pygame.image.load(self.image_file).convert_alpha()
         self.rect = self.image.get_rect()
         self.size = self.image.get_size()
         self.stage = stage
@@ -25,6 +25,9 @@ class Actor(pygame.sprite.Sprite):
         self.speed = speed
         self.destination = vec2d(x_position, y_position)
         self.direction = (self.destination - vec2d(self.pos)).normalized()
+
+    def set_scale(self, scale):
+        self.image = pygame.transform.rotozoom(self.image_original, 1, scale)
 
     def show(self):
         self._visible = True

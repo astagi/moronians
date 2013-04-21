@@ -24,9 +24,11 @@ from .utils import check_event, hollow_text, outlined_text, post_event
 
 
 class Stage(object):
-    def __init__(self, game):
+    def __init__(self, game, next_level=None):
         self.game = game
         self.canvas = pygame.Surface(self.game.surface.get_size())
+        if next_level:
+            self.next_level = next_level
 
     def setup(self):
         pass
@@ -173,12 +175,18 @@ class PlaySound(Action):
 
 
 class End(Action):
+    def __init__(self, stop_music=True):
+        Action.__init__(self)
+        self.stop_music = stop_music
+
     def on_execute(self):
         Action.on_execute(self)
         if self._active:
-            post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_FIRST)
+            post_event(event=EVENT_CHANGE_LEVEL, mode=self.stage.next_level)
             self._active = False
             self._complete = True
+            if self.stop_music:
+                pygame.mixer.music.stop()
 
 
 class ActorCommand(Action):
@@ -196,8 +204,8 @@ class ActorCommand(Action):
 
 
 class StoryStage(Stage):
-    def __init__(self, game):
-        Stage.__init__(self, game)
+    def __init__(self, *args, **kwargs):
+        Stage.__init__(self, *args, **kwargs)
 
         evil_spaceship = ActorSpaceship(self)
         evil_spaceship.set_position(220, -65)
@@ -288,6 +296,86 @@ class StoryStage(Stage):
         Stage.on_start(self)
         pygame.mixer.music.load('assets/music/LongDarkLoop.ogg')
         pygame.mixer.music.play(-1)
+        for time, entry in self.script.items():
+            entry.on_setup(self)
+
+    def on_update(self):
+        for actor in self.actors:
+            actor.on_update(self.game.time_passed)
+
+        for time, entry in self.script.items():
+            entry.on_update(self.game.time_passed)
+            if pygame.time.get_ticks() > self._start_time + time:
+                entry.on_execute()
+
+    def on_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            pygame.mixer.music.stop()
+            post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_level)
+
+    def blit(self):
+        for time, entry in self.script.items():
+            try:
+                entry.on_blit()
+            except AttributeError:
+                pass
+
+        for actor in self.actors:
+            actor.on_blit()
+
+        self.game.surface.blit(self.canvas, (0, 0))
+
+
+class StagePlanetTravel(Stage):
+    def __init__(self, *args, **kwargs):
+        Stage.__init__(self, *args, **kwargs)
+
+        human_ship = ActorHumanShip(self)
+        human_ship.set_position(150, 448)
+
+        planet_name = DisplayText(self, self.planet_name, (None, 400), 'assets/fonts/PressStart2P-Regular.ttf', 15, COLOR_WHITE, False, TypeWriter(150, 'assets/sounds/19.ogg'))
+
+        self.actors = [human_ship, planet_name]
+
+        self.script = {
+            0000: Background(self.background_file),
+
+            2000: ActorCommand(planet_name, lambda x: x.show()),
+            6000: ActorCommand(planet_name, lambda x: x.hide()),
+
+            6002: PlaySound('assets/players/ship_engine.wav'),
+
+            8000: ActorCommand(human_ship, lambda x: x.set_destination(300, 200, 0.08)),
+            8001: ActorCommand(human_ship, lambda x: x.show()),
+
+            8500: ActorCommand(human_ship, lambda x: x.set_scale(0.9)),
+            8501: ActorCommand(human_ship, lambda x: x.set_destination(300, 200, 0.07)),
+
+            9500: ActorCommand(human_ship, lambda x: x.set_scale(0.8)),
+            9501: ActorCommand(human_ship, lambda x: x.set_destination(300, 200, 0.06)),
+
+            10100: ActorCommand(human_ship, lambda x: x.set_scale(0.7)),
+            10101: ActorCommand(human_ship, lambda x: x.set_destination(300, 200, 0.05)),
+
+            10800: ActorCommand(human_ship, lambda x: x.set_scale(0.6)),
+            10801: ActorCommand(human_ship, lambda x: x.set_destination(300, 200, 0.04)),
+
+            11600: ActorCommand(human_ship, lambda x: x.set_scale(0.5)),
+            11601: ActorCommand(human_ship, lambda x: x.set_destination(300, 200, 0.03)),
+
+            12300: ActorCommand(human_ship, lambda x: x.set_scale(0.4)),
+            12301: ActorCommand(human_ship, lambda x: x.set_destination(300, 200, 0.02)),
+
+            13100: ActorCommand(human_ship, lambda x: x.set_scale(0.3)),
+            13101: ActorCommand(human_ship, lambda x: x.set_destination(300, 200, 0.01)),
+
+            14500: ActorCommand(human_ship, lambda x: x.hide()),
+
+            15500: End(),
+        }
+
+    def on_start(self):
+        Stage.on_start(self)
         for time, entry in self.script.items():
             entry.on_setup(self)
 
