@@ -15,7 +15,7 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     START_MESSAGE_TEXT, STORY_TEXT, GAME_LEVEL_STORY,
     GAME_LEVEL_TITLE, GAME_LEVEL_FIRST, VERSION_TEXT, CREDITS_TEXT, TEXT_LEVEL_COMPLETE,
     LEVEL_MODE_STOPPED, LEVEL_MODE_RUNNING, LEVEL_MODE_COMPLETE,
-    LEVEL_MODE_PLAYER_DEATH, LEVEL_MODE_GAME_OVER)
+    LEVEL_MODE_PLAYER_DEATH, LEVEL_MODE_GAME_OVER, GAME_LEVEL_FIRST)
 from .sprites import PowerUpApple, PowerUpShield, SpriteSpaceship
 from .utils import check_event, hollow_text, outlined_text, post_event
 
@@ -127,7 +127,7 @@ class StoryLevel(Level):
             pygame.time.set_timer(EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, 4000)
         elif event.type == EVENT_STORY_SCRIPT_POST_LAUGH_DELAY:
             pygame.time.set_timer(EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, 0)
-            post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_ADDITION_LEVEL)
+            post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_FIRST)
 
     def blit(self):
         self.game.surface.blit(self.title_image, (0, 0))

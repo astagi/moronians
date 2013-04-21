@@ -20,13 +20,13 @@ INTERVAL_INVINCIBLE = 1000
 
 class SpriteCustom(pygame.sprite.Sprite):
     @staticmethod
-    def load_sliced_sprites(w, h, filename):
+    def load_sliced_sprites(width, height, filename, origin_y=0):
         images = []
         master_image = pygame.image.load(os.path.join('assets', filename))#.convert_alpha()
 
         master_width, master_height = master_image.get_size()
-        for i in xrange(int(master_width / w)):
-            images.append(master_image.subsurface((i * w, 0, w , h)))
+        for i in xrange(int(master_width / width)):
+            images.append(master_image.subsurface((i * width, origin_y, width , height)))
         return images
 
 
@@ -100,6 +100,9 @@ class SpritePlayer(SpriteCustom):
         )
         self.rect.topleft = [self.pos[0], self.pos[1]]
 
+    def set_direction(self, vector):
+        self.direction = vector
+
     def on_event(self, event):
         if event.type == pygame.KEYDOWN and not self.game.paused:
             if event.key == pygame.K_RETURN and self.answer:
@@ -145,7 +148,7 @@ class SpritePlayer(SpriteCustom):
             #    print 'asd'
             #    #self.die_sound.play()
 
-            self.direction = vec2d(direction_x, direction_y).normalized()
+            self.set_direction(vec2d(direction_x, direction_y).normalized())
 
             if direction_x != 0 or direction_y != 0:
                 t = pygame.time.get_ticks()
@@ -326,10 +329,13 @@ class SpriteEnemy(SpriteCustom):
         # Call update to set our first image.
         self.update(0, force=True)
 
+    def set_direction(self, vector):
+        self.direction = vector
+
     def update(self, time_passed, force=False):
-        # Re calculate direction to follow player
         if not self.game.paused:
-            self.direction = (self.game.player.pos - self.pos).normalized()
+            self.set_direction((self.game.player.pos - self.pos).normalized())
+
             t = pygame.time.get_ticks()
             if t - self._last_update > self._delay or force:
                 self._frame += 1
