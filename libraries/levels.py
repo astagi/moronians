@@ -12,11 +12,12 @@ from .events import (EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP,
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT,
     PAUSE_TEXT_VERTICAL_OFFSET,
-    START_MESSAGE_TEXT, STORY_TEXT, GAME_LEVEL_STORY,
+    START_MESSAGE_TEXT, TEXT_YEAR, GAME_LEVEL_STORY,
     GAME_LEVEL_TITLE, GAME_LEVEL_FIRST, VERSION_TEXT, CREDITS_TEXT, TEXT_LEVEL_COMPLETE,
     LEVEL_MODE_STOPPED, LEVEL_MODE_RUNNING, LEVEL_MODE_COMPLETE,
-    LEVEL_MODE_PLAYER_DEATH, LEVEL_MODE_GAME_OVER, GAME_LEVEL_FIRST)
-from .sprites import PowerUpApple, PowerUpShield, SpriteSpaceship
+    LEVEL_MODE_PLAYER_DEATH, LEVEL_MODE_GAME_OVER, GAME_LEVEL_FIRST,
+    TEXT_STEAL_BOOKS_1, TEXT_STEAL_BOOKS_2, TEXT_HERO)
+from .sprites import PowerUpApple, PowerUpShield
 from .utils import check_event, hollow_text, outlined_text, post_event
 
 
@@ -84,65 +85,6 @@ class TitleScreen(Level):
 
     def on_exit(self):
         pygame.mixer.music.stop()
-
-
-class StoryLevel(Level):
-    def __init__(self, game):
-        self.game = game
-        self.caption_letter = 0
-
-        self.bio_ship_image = pygame.image.load('assets/enemies/bio_ship.png').convert()
-        self.bio_ship = SpriteSpaceship(self.game, image=self.bio_ship_image, speed=0.04)
-        screen_size = self.game.surface.get_size()
-        image = pygame.image.load('assets/backgrounds/earth.png').convert()
-        self.title_image = background = pygame.transform.scale(image, (self.game.surface.get_size()[0], self.game.surface.get_size()[1]))
-
-        self.font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 15)
-        self.laugh_sound = pygame.mixer.Sound('assets/sounds/evil-laughter-witch.ogg')
-
-    def on_start(self):
-        pygame.mixer.music.load('assets/music/LongDarkLoop.ogg')
-        pygame.mixer.music.play(-1)
-        pygame.time.set_timer(EVENT_STORY_SCRIPT_CAPTION, 2000)
-
-    def on_update(self):
-        self.bio_ship.update(self.game.time_passed)
-
-    def on_event(self, event):
-        if event.type == pygame.KEYDOWN:
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 0)
-            post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_FIRST)
-        elif event.type == EVENT_STORY_SCRIPT_CAPTION:
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_CAPTION, 0)
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 150)
-        elif event.type == EVENT_STORY_SCRIPT_TYPE:
-            self.type_caption_letter()
-        elif event.type == EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP:
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, 0)
-            self.bio_ship.activate()
-
-        elif event.type == EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH:
-            self.laugh_sound.play()
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH, 0)
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, 4000)
-        elif event.type == EVENT_STORY_SCRIPT_POST_LAUGH_DELAY:
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, 0)
-            post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_FIRST)
-
-    def blit(self):
-        self.game.surface.blit(self.title_image, (0, 0))
-
-        text_size = self.font.size(STORY_TEXT[0: self.caption_letter])
-        label = self.font.render(STORY_TEXT[0: self.caption_letter], 1, COLOR_WHITE)
-        self.game.surface.blit(label, (self.game.surface.get_size()[0] / 2 - text_size[0] / 2, self.game.surface.get_size()[1] - 60))
-
-        self.bio_ship.blit()
-
-    def type_caption_letter(self):
-        self.caption_letter += 1
-        if self.caption_letter > len(STORY_TEXT):
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 0)
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, 2000)
 
 
 class PlayLevel(Level):
@@ -319,56 +261,3 @@ class PlayLevel(Level):
         if self.boss_level:
             self._time_level_complete = pygame.time.get_ticks()
             self.game.shake_screen = True
-
-
-class IntermissionLevel(Level):
-    def setup(self):
-        self.bio_ship_image = pygame.image.load('assets/enemies/bio_ship.png').convert()
-        self.bio_ship = SpriteSpaceship(self.game, image=self.bio_ship_image, speed=0.04)
-        screen_size = self.game.surface.get_size()
-        image = pygame.image.load('assets/backgrounds/earth.png').convert()
-        self.title_image = background = pygame.transform.scale(image, (self.game.surface.get_size()[0], self.game.surface.get_size()[1]))
-        self.font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 15)
-        self.caption_letter = 0
-        self.laugh_sound = pygame.mixer.Sound('assets/sounds/evil-laughter-witch.ogg')
-
-    def start(self):
-        pygame.mixer.music.load('assets/music/LongDarkLoop.ogg')
-        pygame.mixer.music.play(-1)
-        pygame.time.set_timer(EVENT_STORY_SCRIPT_CAPTION, 2000)
-
-    def update(self):
-        self.game.surface.blit(self.title_image, (0, 0))
-
-        text_size = self.font.size(STORY_TEXT[0: self.caption_letter])
-        label = self.font.render(STORY_TEXT[0: self.caption_letter], 1, COLOR_WHITE)
-        self.game.surface.blit(label, (self.game.surface.get_size()[0] / 2 - text_size[0] / 2, self.game.surface.get_size()[1] - 60))
-
-        self.bio_ship.update(self.game.time_passed)
-        self.bio_ship.blit()
-
-    def type_caption_letter(self):
-        self.caption_letter += 1
-        if self.caption_letter > len(STORY_TEXT):
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 0)
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, 2000)
-
-    def process_event(self, event):
-        if event.type == pygame.KEYDOWN:
-            raise LevelComplete
-        elif event.type == EVENT_STORY_SCRIPT_CAPTION:
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_CAPTION, 0)
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_TYPE, 150)
-        elif event.type == EVENT_STORY_SCRIPT_TYPE:
-            self.type_caption_letter()
-        elif event.type == EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP:
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, 0)
-            self.bio_ship.activate()
-
-        elif event.type == EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH:
-            self.laugh_sound.play()
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH, 0)
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, 4000)
-        elif event.type == EVENT_STORY_SCRIPT_POST_LAUGH_DELAY:
-            pygame.time.set_timer(EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, 0)
-            raise LevelComplete

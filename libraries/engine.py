@@ -11,13 +11,14 @@ from .exceptions import SwallowEvent
 from .events import (EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, EVENT_STORY_SCRIPT_CAPTION,
     EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
     EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, EVENT_CHANGE_LEVEL)
-from .levels import StoryLevel, TitleScreen
+from .levels import TitleScreen
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT,
-    PAUSE_TEXT_VERTICAL_OFFSET, START_MESSAGE_TEXT, STORY_TEXT, GAME_LEVEL_TITLE,
+    PAUSE_TEXT_VERTICAL_OFFSET, START_MESSAGE_TEXT, GAME_LEVEL_TITLE,
     GAME_LEVEL_STORY, TEXT_EXIT_CONFIRMATION,
     EXIT_TEXT_VERTICAL_OFFSET)
 from .sprites import SpritePlayer
+from .stages import StoryStage
 from .utils import hollow_text, outlined_text, post_event, check_event, Timer
 from .vec2d import vec2d
 from utils.importlib import import_module
@@ -43,6 +44,7 @@ class Game(object):
         self._screen = pygame.display.set_mode(DEFAULT_SCREENSIZE, pygame.HWSURFACE | pygame.DOUBLEBUF)# | pygame.FULLSCREEN)
         self.surface = pygame.Surface(self._screen.get_size())
         self.running = True
+        self.font_debug = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
         self.pause_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 15)
         self.enemy_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
         self.font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
@@ -128,6 +130,9 @@ class Game(object):
         if self.paused:
             self.display_pause_label(self.pause_font)
 
+        if self.debug:
+            self.display_debug_info(self.font_debug)
+
         if self.shake_screen:
             self._screen.blit(self.surface, (randint(0, 10), randint(0, 10)))
         else:
@@ -146,6 +151,11 @@ class Game(object):
     def display_pause_label(self, font):
         text_size = font.size(PAUSE_TEXT)
         self.surface.blit(font.render(PAUSE_TEXT, 1, COLOR_WHITE), (self._screen.get_width() / 2 - text_size[0] / 2, self._screen.get_height() / 2 - text_size[1] / 2 - PAUSE_TEXT_VERTICAL_OFFSET))
+
+    def display_debug_info(self, font):
+        debug_text = 'tick: %d' % pygame.time.get_ticks()
+        #text_size = font.size(debug_text)
+        self.surface.blit(font.render(debug_text, False, COLOR_WHITE), (0, 0))
 
     def exit_confirmation(self, font):
         text_size = font.size(TEXT_EXIT_CONFIRMATION)

@@ -562,30 +562,31 @@ class SpriteDarkBoss(SpriteBoss):
     hit_points = total_hit_points = 50
 
 
-class SpriteSpaceship(pygame.sprite.Sprite):
-    def __init__(self, game, image, speed):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = image
-        self.speed = speed
-        self.game = game
-        self.rect = self.image.get_rect()
-        self.size = self.image.get_size()
-        self.pos = vec2d(self.game.surface.get_size()[0] / 2 - self.size[0] / 2, 0)
-        self._start = pygame.time.get_ticks()
-        self._last_update = 0
-        self.direction = (vec2d(self.game.surface.get_size()[0] / 2, self.game.surface.get_size()[1] / 2) - vec2d(self.pos)).normalized()
 
-        self.tractor_beam_image = pygame.image.load('assets/enemies/tractor_beam.png').convert()
 
-        self.show_tractor_beam = False
-        self.tractor_beam_active = False
-        self.active = False
+    """
 
-        self.book_active = False
-        self.book_image = pygame.image.load('assets/enemies/books.png').convert_alpha()
-        self.book_speed = 0.03
+    #def __init__(self, stage):
+    #    Actor.__init__
 
-    def update(self, time_passed):
+        #self.pos = vec2d(self.game.surface.get_size()[0] / 2 - self.size[0] / 2, 0)
+        #self._start = pygame.time.get_ticks()
+        #self._last_update = 0
+        #self.direction = (vec2d(self.game.surface.get_size()[0] / 2, self.game.surface.get_size()[1] / 2) - vec2d(self.pos)).normalized()
+
+        #self.tractor_beam_image = pygame.image.load('assets/enemies/tractor_beam.png').convert()
+
+        #self.show_tractor_beam = False
+        #self.tractor_beam_active = False
+        #self.active = False
+
+        #self.book_active = False
+        #self.book_image = pygame.image.load('assets/enemies/books.png').convert_alpha()
+        #self.book_speed = 0.03
+        #self.speed = 0.04
+
+
+    #def update(self, time_passed):
         if self.active:
             if self.pos[1] < 40:
                 displacement = vec2d(
@@ -620,19 +621,22 @@ class SpriteSpaceship(pygame.sprite.Sprite):
             self.show_tractor_beam = not self.show_tractor_beam
 
     def blit(self):
-        if self.show_tractor_beam:
-            self.game.surface.blit(self.tractor_beam_image, (self.pos[0] + 18, self.pos[1] + 25))
+        #if self.show_tractor_beam:
+        #    self.game.surface.blit(self.tractor_beam_image, (self.pos[0] + 18, self.pos[1] + 25))
 
-        if self.book_active:
-            self.game.surface.blit(self.book_image, self.book_position)
+        #if self.book_active:
+        #    self.game.surface.blit(self.book_image, self.book_position)
 
-        if self.active:
-            self.game.surface.blit(self.image, self.pos)
+        #if self.active:
+        if self._show:
+            self.stage.canvas(self.image, self.pos)
 
-    def activate(self):
-        self.active = True
-        self.original_position = self.pos
 
+    #def activate(self):
+    #    self.active = True
+    #    self.original_position = self.pos
+
+    """
 
 class SpritePowerUp(pygame.sprite.Sprite):
     def __init__(self, game):
@@ -692,6 +696,18 @@ class PowerUpShield(SpritePowerUp):
     chance = lambda self: randint(0, 500) == 0
     image_file = 'assets/powerups/E_Metal04.png'
     sound_file = 'assets/powerups/16.ogg'
+
+    def collision(self):
+        self.effect_active = True
+        self._time_initial = pygame.time.get_ticks()
+        self.game.player._state = PLAYER_STATE_INVINCIBLE
+        self.game.player._invincible_initial_time = pygame.time.get_ticks() + 5000
+
+
+class PowerUpEnemyFreeze(SpritePowerUp):
+    chance = lambda self: randint(0, 500) == 0
+    image_file = 'assets/powerups/S_Ice02.png'
+    sound_file = 'assets/powerups/75.ogg'
 
     def collision(self):
         self.effect_active = True

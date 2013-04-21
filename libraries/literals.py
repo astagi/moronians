@@ -15,13 +15,16 @@ HEALTH_BAR_TEXT = 'Energy'
 PAUSE_TEXT = 'PAUSE'
 SCORE_TEXT = 'Score'
 START_MESSAGE_TEXT = 'Press ENTER to start'
-STORY_TEXT = 'Earth, year 2023'
 GAME_OVER_TEXT = 'Game Over'
 VERSION_TEXT = 'Version'
 CREDITS_TEXT = '(c) 2013 Roberto Rosario'
 TEXT_BOSS_HIT_POINT = 'Boss'
 TEXT_LEVEL_COMPLETE = 'Level complete'
 TEXT_EXIT_CONFIRMATION = 'Exit game Y/N?'
+TEXT_YEAR = 'Earth, year 2023'
+TEXT_STEAL_BOOKS_1 = 'The Moronians come to Earth'
+TEXT_STEAL_BOOKS_2 = 'to steal all books and knowledge'
+TEXT_HERO = 'A hero will rescue the knowledge!'
 
 # Game levels
 GAME_LEVEL_TITLE = 0
