@@ -3,7 +3,7 @@ from libraries.levels import PlayLevel, TitleScreen
 from libraries.literals import GAME_LEVEL_TITLE, GAME_LEVEL_STORY
 from libraries.maps import Map1, Map2, Map3, Map4
 from libraries.sprites import (EnemyArachnid, EnemyEyePod, EnemyFlyingBot, EnemyRedSlime,
-    PowerUpApple, PowerUpShield, SpriteDarkBoss)
+    SpriteDarkBoss)
 from libraries.stages import StoryStage, StagePlanetTravel
 from libraries.utils import hollow_text, outlined_text, post_event, check_event, Timer
 

@@ -19,7 +19,6 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     LEVEL_MODE_STOPPED, LEVEL_MODE_RUNNING, LEVEL_MODE_COMPLETE,
     LEVEL_MODE_PLAYER_DEATH, LEVEL_MODE_GAME_OVER, GAME_LEVEL_FIRST,
     TEXT_STEAL_BOOKS_1, TEXT_STEAL_BOOKS_2, TEXT_HERO)
-from .sprites import PowerUpApple, PowerUpShield
 from .utils import check_event, hollow_text, outlined_text, post_event
 
 
