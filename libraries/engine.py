@@ -122,7 +122,7 @@ class Game(object):
         self.module.modes[self._current_level].on_update()
 
     def on_blit(self):
-        self.module.modes[self._current_level].blit()
+        self.module.modes[self._current_level].on_blit()
 
         if self.exit_confirm:
             self.exit_confirmation(self.pause_font)

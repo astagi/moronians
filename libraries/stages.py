@@ -34,15 +34,35 @@ class Stage(object):
 
     def on_start(self):
         self._start_time = pygame.time.get_ticks()
+        for time, entry in self.script.items():
+            entry.on_setup(self)
 
-    def update(self):
-        pass
+    def on_update(self):
+        for actor in self.actors:
+            actor.on_update(self.game.time_passed)
+
+        for time, entry in self.script.items():
+            entry.on_update(self.game.time_passed)
+            if pygame.time.get_ticks() > self._start_time + time:
+                entry.on_execute()
 
     def process_event(self, event):
         pass
 
     def on_event(self, event):
         pass
+
+    def on_blit(self):
+        for time, entry in self.script.items():
+            try:
+                entry.on_blit()
+            except AttributeError:
+                pass
+
+        for actor in self.actors:
+            actor.on_blit()
+
+        self.game.surface.blit(self.canvas, (0, 0))
 
 
 class Action(object):
@@ -160,6 +180,7 @@ class Background(Action):
         if self._active:
             self._complete = True
 
+
 class PlaySound(Action):
     def __init__(self, sound_file):
         Action.__init__(self)
@@ -169,6 +190,21 @@ class PlaySound(Action):
         Action.on_execute(self)
         if self._active:
             self.sound.play()
+            self._active = False
+            self._complete = True
+
+
+class PlayMusic(Action):
+    def __init__(self, music_file, loop=False):
+        Action.__init__(self)
+        self.loop = loop
+        self.music_file = music_file
+
+    def on_execute(self):
+        Action.on_execute(self)
+        if self._active:
+            pygame.mixer.music.load(self.music_file)
+            pygame.mixer.music.play(-1 if self.loop else 0)
             self._active = False
             self._complete = True
 
@@ -241,6 +277,8 @@ class StoryStage(Stage):
 
         self.script = {
             0000: Background('assets/backgrounds/earth.png'),
+            0001: PlayMusic('assets/music/LongDarkLoop.ogg'),
+
             1000: ActorCommand(text_time, lambda x: x.show()),
             6000: ActorCommand(text_time, lambda x: x.hide()),
 
@@ -291,38 +329,10 @@ class StoryStage(Stage):
             47000: End(),
         }
 
-    def on_start(self):
-        Stage.on_start(self)
-        pygame.mixer.music.load('assets/music/LongDarkLoop.ogg')
-        pygame.mixer.music.play(-1)
-        for time, entry in self.script.items():
-            entry.on_setup(self)
-
-    def on_update(self):
-        for actor in self.actors:
-            actor.on_update(self.game.time_passed)
-
-        for time, entry in self.script.items():
-            entry.on_update(self.game.time_passed)
-            if pygame.time.get_ticks() > self._start_time + time:
-                entry.on_execute()
-
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
             pygame.mixer.music.stop()
             post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_level)
-
-    def blit(self):
-        for time, entry in self.script.items():
-            try:
-                entry.on_blit()
-            except AttributeError:
-                pass
-
-        for actor in self.actors:
-            actor.on_blit()
-
-        self.game.surface.blit(self.canvas, (0, 0))
 
 
 class StagePlanetTravel(Stage):
@@ -373,32 +383,6 @@ class StagePlanetTravel(Stage):
             15500: End(),
         }
 
-    def on_start(self):
-        Stage.on_start(self)
-        for time, entry in self.script.items():
-            entry.on_setup(self)
-
-    def on_update(self):
-        for actor in self.actors:
-            actor.on_update(self.game.time_passed)
-
-        for time, entry in self.script.items():
-            entry.on_update(self.game.time_passed)
-            if pygame.time.get_ticks() > self._start_time + time:
-                entry.on_execute()
-
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
             post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_FIRST)
-
-    def blit(self):
-        for time, entry in self.script.items():
-            try:
-                entry.on_blit()
-            except AttributeError:
-                pass
-
-        for actor in self.actors:
-            actor.on_blit()
-
-        self.game.surface.blit(self.canvas, (0, 0))

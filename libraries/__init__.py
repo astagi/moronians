@@ -8,9 +8,9 @@ __version_info__ = {
 
 
 def get_version():
-    '''
+    """
     Return the formatted version information
-    '''
+    """
     vers = ['%(major)i.%(minor)i' % __version_info__, ]
 
     if __version_info__['micro']:

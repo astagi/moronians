@@ -63,7 +63,7 @@ class TitleScreen(Level):
             self.show_start_message = not self.show_start_message
             self.title_last_update = t
 
-    def blit(self):
+    def on_blit(self):
         # Redraw the background
         self.game.surface.blit(self.title_image, (0, 0))
 
@@ -195,7 +195,7 @@ class PlayLevel(Level):
             if pygame.time.get_ticks() > self._time_level_complete + 10000:
                 post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_level)
 
-    def blit(self):
+    def on_blit(self):
         # Redraw the background
         self.game.display_tile_map(self.map)
 
