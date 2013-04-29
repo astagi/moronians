@@ -30,9 +30,14 @@ class Stage(object):
             self.next_stage = next_stage
 
         self.actors = []
+        self.script = {}
 
     def setup(self):
         pass
+
+    def on_play(self, script):
+        self.script = script
+        self.on_start()
 
     def on_start(self):
         self._start_time = pygame.time.get_ticks()
@@ -266,6 +271,7 @@ class PlayMusic(Action):
     def on_execute(self):
         Action.on_execute(self)
         if self._active:
+            pygame.mixer.music.stop()
             pygame.mixer.music.load(self.music_file)
             pygame.mixer.music.play(-1 if self.loop else 0)
             self._active = False
