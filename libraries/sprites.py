@@ -464,7 +464,7 @@ class SpriteBoss(SpriteEnemy):
                 self.image = self.images[0]
                 self._state = ENEMY_STATE_ALIVE
                 self._move_time = pygame.time.get_ticks()
-                self.game.get_current_level().spawn_enemy(EnemyEyePod, origin_point=(self.pos[0] + self.image.get_size()[0] / 2, self.pos[1] + self.image.get_size()[1]), speed=EnemyEyePod.speed * 10)
+                self.game.get_current_level().spawn_enemy(EnemyEyePod, origin_point=(self.pos[0] + self.image.get_size()[0] / 2, self.pos[1] + self.image.get_size()[1]), speed=EnemyEyePod.speed * 8)
             else:
                 self.image = self.images[1]
 

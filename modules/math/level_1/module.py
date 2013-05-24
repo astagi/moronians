@@ -41,7 +41,7 @@ class AdditionLevel(PlayLevel):
         self.player = player
         self.enemy_class = EnemyEyePod
         self.stage_score_value = 100
-        self.question_function = lambda: formula_generator(OPERATOR_ADD, digits_1=1, digits_2=1)
+        self.question_function = lambda: formula_generator(OPERATOR_ADD, range_1=(0, 6), range_2=(0, 6))
         self.enemy_count = 8
         self.next_level = GAME_LEVEL_ADDITION_BOSS
 
@@ -54,7 +54,7 @@ class AdditionBossLevel(PlayLevel):
         self.player = player
         self.boss_class = SpriteDarkBoss
         self.stage_score_value = 100
-        self.question_function = lambda: formula_generator(OPERATOR_ADD, digits_1=1, digits_2=1)
+        self.question_function = lambda: formula_generator(OPERATOR_ADD, range_1=(0, 6), range_2=(0, 6))
         self.enemy_attack_points = 5
         self.next_level = GAME_LEVEL_SUBSTRACT_LEVEL
 

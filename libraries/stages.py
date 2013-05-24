@@ -24,6 +24,10 @@ from .utils import check_event, hollow_text, outlined_text, post_event
 
 
 class Stage(object):
+    """
+    Stage class defines a 'stage' in the playwright sense, where there is a
+    script that guides the action
+    """
     def __init__(self, game, next_level=None):
         self.game = game
         self.canvas = pygame.Surface(self.game.surface.get_size())
@@ -47,13 +51,11 @@ class Stage(object):
 
 
 class Action(object):
-    def __init__(self):
+    def on_setup(self, stage):
+        self.stage = stage
         self._active = False
         self._executed = False
         self._complete = False
-
-    def on_setup(self, stage):
-        self.stage = stage
 
     def on_execute(self):
         if not self._active and not self._complete:
@@ -68,10 +70,16 @@ class Action(object):
 
 
 class TextEffect(object):
+    """
+    DisplayText effects base class
+    """
     pass
 
 
 class TypeWriter(TextEffect):
+    """
+    Display one letter at a time with a delay and an optional sound effect
+    """
     def __init__(self, delay, sound_file=None):
         self.delay = delay
         if sound_file:
@@ -85,6 +93,8 @@ class TypeWriter(TextEffect):
         self.action = action
         self.original_string = action.string
         action.string = ''
+        self._letter_index = 0
+        self._last_letter_time = 0
 
     def on_update(self, time_passed):
         if self.action._active:
@@ -103,6 +113,9 @@ class TypeWriter(TextEffect):
 
 
 class DisplayText(Action):
+    """
+    Show a string at a specific position on a stage
+    """
     def __init__(self, stage, string, position, font_file, size, color, antialiasing=True, effect=None):
         Action.__init__(self)
         self.string = string

@@ -4,12 +4,9 @@ from libraries.utils import post_event
 
 
 class ModuleBase(object):
-    #def __init__(self, game):
-        #self.game = game
-        #self.modes = {
-        #    GAME_LEVEL_TITLE: TitleScreen(game),
-        #    GAME_LEVEL_STORY: StoryLevel(game),
-        #}
-
+    """
+    Teaching module definion base class
+    Must override __init__ method
+    """
     def on_start(self):
         post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_TITLE)

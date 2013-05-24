@@ -2,25 +2,6 @@ from random import randint, choice
 from .literals import OPERATOR_ADD, OPERATOR_SUB, OPERATOR_MUL, OPERATOR_DIV
 
 
-word_list_spanish_english = [
-#    (chr(32), 'airplane'),
-    ('avion', 'airplane'),
-    ('rojo', 'red'),
-    ('azul', 'blue'),
-    ('ayer', 'yesterday'),
-    ('jugar', 'play'),
-    ('foto', 'photo'),
-    ('padre', 'father'),
-    ('madre', 'mother'),
-    ('abuelo', 'grandfather'),
-    ('abuela', 'grandmother'),
-]
-
-
-def pair_generator(word_list):
-    return choice(word_list)
-
-
 def formula_generator(operation, digits_1=1, digits_2=1, range_1=None, range_2=None, even_1=False, even_2=False, big_endian=False):
     if range_1:
         low_limit_1, high_limit_1 = range_1
