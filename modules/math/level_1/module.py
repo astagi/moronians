@@ -91,6 +91,6 @@ class DivisionLevel(PlayLevel):
         self.player = player
         self.enemy_class = EnemyFlyingBot
         self.stage_score_value = 250
-        self.question_function = lambda: formula_generator(OPERATOR_DIV, digits_1=1, range_2=(1,2), even_1=True, even_2=True, big_endian=True)
+        self.question_function = lambda: formula_generator(OPERATOR_DIV, digits_1=1, range_2=(1, 2), even_1=True, even_2=True, big_endian=True)
         self.enemy_count = 2
         self.next_level = GAME_LEVEL_TITLE

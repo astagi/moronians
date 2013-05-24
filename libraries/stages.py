@@ -161,6 +161,7 @@ class TextAlignment(object):
     def get_result(self):
         return self.position
 
+
 # Horizontal
 class LeftAlign(TextAlignment):
     def __init__(self, action, position):

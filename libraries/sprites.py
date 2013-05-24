@@ -22,11 +22,11 @@ class SpriteCustom(pygame.sprite.Sprite):
     @staticmethod
     def load_sliced_sprites(width, height, filename, origin_y=0):
         images = []
-        master_image = pygame.image.load(os.path.join('assets', filename))#.convert_alpha()
+        master_image = pygame.image.load(os.path.join('assets', filename))  # .convert_alpha()
 
         master_width, master_height = master_image.get_size()
         for i in xrange(int(master_width / width)):
-            images.append(master_image.subsurface((i * width, origin_y, width , height)))
+            images.append(master_image.subsurface((i * width, origin_y, width, height)))
         return images
 
 
@@ -324,7 +324,7 @@ class SpriteEnemy(SpriteCustom):
         self.death_sound = pygame.mixer.Sound('assets/sounds/8bit_bomb_explosion.wav')
 
         # Calculate initial direction
-        self.direction = (vec2d(self.game.surface.get_size()[0] / 2,self.game.surface.get_size()[1] / 2) - vec2d(init_position)).normalized()
+        self.direction = (vec2d(self.game.surface.get_size()[0] / 2, self.game.surface.get_size()[1] / 2) - vec2d(init_position)).normalized()
 
         # Call update to set our first image.
         self.update(0, force=True)
@@ -446,14 +446,7 @@ class SpriteBoss(SpriteEnemy):
         # Calculate initial direction
         self.direction = vec2d(1, 0)  # To the right
 
-        # Call update to set our first image.
-        #self.update(pygame.time.get_ticks(), force=True)
-
-
     def update(self, time_passed, force=False):
-        # Re calculate direction to follow player
-        #self.direction = (self.game.player.pos - self.pos).normalized()
-
         if self._state == ENEMY_STATE_ALIVE:
             if pygame.time.get_ticks() > self._move_time + 1000:
                 self._state = ENEMY_STATE_FIRING
@@ -503,12 +496,6 @@ class SpriteBoss(SpriteEnemy):
 
     def blit(self):
         self.game.surface.blit(self.image, (self.pos.x, self.pos.y))
-        #if self.alive:
-        #    # If enemy is alive show it's question
-        #    text_size = self.font.size(self.question)
-        #    label = outlined_text(self.font, self.question, COLOR_WHITE, COLOR_ALMOST_BLACK)
-
-        #    self.game.surface.blit(label, (self.pos.x + self.size[0] / 2 - text_size[0] / 2, self.pos.y - 11))
 
         # Blit health bar
         if self.is_alive():
@@ -535,7 +522,7 @@ class SpriteBoss(SpriteEnemy):
                     self.game.get_current_level().on_level_complete()
                     self.direction = vec2d(0, 0)
                     self.game.get_current_level().on_level_complete()
-                break;
+                break
 
     def defeat(self, enemies):
         if self.alive:

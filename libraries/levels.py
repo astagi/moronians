@@ -195,9 +195,9 @@ class PlayLevel(Level):
                 hit = True
                 player.score += enemy.score_value
                 enemy.defeat(self.enemies)
-                break;
+                break
 
-        if hit == False:
+        if hit is False:
             player.player_misses_shot()
 
     def on_level_complete(self):

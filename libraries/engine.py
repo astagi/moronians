@@ -31,16 +31,16 @@ class Game(object):
         self.paused = False
         self.finish = False
         self.debug = debug
-        #try:
-        self.module_class = import_module('modules.%s.module' % module_name).Module
-        #except ImportError:
-        #    print 'Unable to import module %s' % module_name
-        #    exit(1)
+        try:
+            self.module_class = import_module('modules.%s.module' % module_name).Module
+        except ImportError:
+            print 'Unable to import module %s' % module_name
+            exit(1)
 
     def on_init(self):
         pygame.init()
         self.clock = pygame.time.Clock()
-        self._screen = pygame.display.set_mode(DEFAULT_SCREENSIZE, pygame.HWSURFACE | pygame.DOUBLEBUF)# | pygame.FULLSCREEN)
+        self._screen = pygame.display.set_mode(DEFAULT_SCREENSIZE, pygame.HWSURFACE | pygame.DOUBLEBUF)  # | pygame.FULLSCREEN)
         self.surface = pygame.Surface(self._screen.get_size())
         self.running = True
         self.font_debug = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
