@@ -19,7 +19,6 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     LEVEL_MODE_STOPPED, LEVEL_MODE_RUNNING, LEVEL_MODE_COMPLETE,
     LEVEL_MODE_PLAYER_DEATH, LEVEL_MODE_GAME_OVER, GAME_LEVEL_FIRST,
     TEXT_STEAL_BOOKS_1, TEXT_STEAL_BOOKS_2, TEXT_HERO)
-from .sprites import PowerUpApple, PowerUpShield
 from .utils import check_event, hollow_text, outlined_text, post_event
 
 
@@ -28,26 +27,53 @@ class Stage(object):
     Stage class defines a 'stage' in the playwright sense, where there is a
     script that guides the action
     """
-    def __init__(self, game, next_level=None):
+    def __init__(self, game, next_stage=None):
         self.game = game
         self.canvas = pygame.Surface(self.game.surface.get_size())
-        if next_level:
-            self.next_level = next_level
+        if next_stage:
+            self.next_stage = next_stage
+
+        self.actors = []
+        self.script = {}
 
     def setup(self):
         pass
 
+    def on_play(self, script):
+        self.script = script
+        self.on_start()
+
     def on_start(self):
         self._start_time = pygame.time.get_ticks()
+        for time, entry in self.script.items():
+            entry.on_setup(self)
 
-    def update(self):
-        pass
+    def on_update(self):
+        for actor in self.actors:
+            actor.on_update(self.game.time_passed)
+
+        for time, entry in self.script.items():
+            entry.on_update(self.game.time_passed)
+            if pygame.time.get_ticks() > self._start_time + time:
+                entry.on_execute()
 
     def process_event(self, event):
         pass
 
     def on_event(self, event):
         pass
+
+    def on_blit(self):
+        for time, entry in self.script.items():
+            try:
+                entry.on_blit()
+            except AttributeError:
+                pass
+
+        for actor in self.actors:
+            actor.on_blit()
+
+        self.game.surface.blit(self.canvas, (0, 0))
 
 
 class Action(object):
@@ -73,7 +99,8 @@ class TextEffect(object):
     """
     DisplayText effects base class
     """
-    pass
+    def on_setup(self, action):
+        self.action = action
 
 
 class TypeWriter(TextEffect):
@@ -90,7 +117,7 @@ class TypeWriter(TextEffect):
         self._last_letter_time = 0
 
     def on_setup(self, action):
-        self.action = action
+        TextEffect.on_setup(self, action)
         self.original_string = action.string
         action.string = ''
         self._letter_index = 0
@@ -112,12 +139,71 @@ class TypeWriter(TextEffect):
                 self.action.string = self.original_string[0:self._letter_index]
 
 
+class Blink(TextEffect):
+    def __init__(self, delay=1000, sound_file=None):
+        self.delay = delay
+        if sound_file:
+            self.sound = pygame.mixer.Sound(sound_file)
+        else:
+            self.sound = None
+        self._last_time = 0
+
+    def on_update(self, time_passed):
+        if self.action._active:
+            if pygame.time.get_ticks() > self._last_time + self.delay:
+                self._last_time = pygame.time.get_ticks()
+                self.action._visible = not self.action._visible
+                if self.action._visible and self.sound:
+                    self.sound.play()
+
+
+class TextAlignment(object):
+    def get_result(self):
+        return self.position
+
+# Horizontal
+class LeftAlign(TextAlignment):
+    def __init__(self, action, position):
+        self.position = position
+
+
+class CenterAlign(TextAlignment):
+    def __init__(self, action, position):
+        text_size = action.font.size(action.string)
+        self.position = action.stage.canvas.get_size()[0] / 2 - text_size[0] / 2 + position
+
+
+class RightAlign(TextAlignment):
+    def __init__(self, action, position):
+        text_size = action.font.size(action.string)
+        self.position = action.stage.canvas.get_size()[0] - position
+
+
+# Vertical
+class TopAlign(TextAlignment):
+    def __init__(self, action, position):
+        self.position = position
+
+
+class MiddleAlign(TextAlignment):
+    def __init__(self, action, position):
+        text_size = action.font.size(action.string)
+        self.position = action.stage.canvas.get_size()[1] / 2 - text_size[1] / 2 + position
+
+
+class BottomtAlign(TextAlignment):
+    def __init__(self, action, position):
+        text_size = action.font.size(action.string)
+        self.position = action.stage.canvas.get_size()[1] - position
+
+
 class DisplayText(Action):
     """
     Show a string at a specific position on a stage
     """
-    def __init__(self, stage, string, position, font_file, size, color, antialiasing=True, effect=None):
+    def __init__(self, stage, string, position, font_file, size, color, antialiasing=True, effect=None, horizontal_align=LeftAlign, vertical_align=TopAlign):
         Action.__init__(self)
+        self.stage = stage
         self.string = string
 
         self.font = pygame.font.Font(font_file, size)
@@ -127,15 +213,10 @@ class DisplayText(Action):
         self.effect = effect
         self._visible = False
 
-        if position[0] is None:
-            text_size = self.font.size(self.string)
-            self.position = (
-                stage.canvas.get_size()[0] / 2 - text_size[0] / 2,
-                position[1]
-            )
-        else:
-            self.position = position
-
+        self.position = (
+            horizontal_align(self, position[0]).get_result(),
+            vertical_align(self, position[1]).get_result()
+        )
         self.on_setup(stage)
 
     def on_setup(self, *args, **kwargs):
@@ -161,9 +242,15 @@ class DisplayText(Action):
 
 
 class Background(Action):
-    def __init__(self, image_file):
+    def __init__(self, image_file, fit=False):
         Action.__init__(self)
         self.image = pygame.image.load(image_file).convert()
+        self.fit = fit
+
+    def on_setup(self, stage):
+        Action.on_setup(self, stage)
+        if self.fit:
+            self.image = pygame.transform.scale(self.image, (self.stage.game.surface.get_size()[0], self.stage.game.surface.get_size()[1]))
 
     def on_blit(self):
         if self._active:
@@ -173,6 +260,7 @@ class Background(Action):
         Action.on_execute(self)
         if self._active:
             self._complete = True
+
 
 class PlaySound(Action):
     def __init__(self, sound_file):
@@ -187,6 +275,22 @@ class PlaySound(Action):
             self._complete = True
 
 
+class PlayMusic(Action):
+    def __init__(self, music_file, loop=False):
+        Action.__init__(self)
+        self.loop = loop
+        self.music_file = music_file
+
+    def on_execute(self):
+        Action.on_execute(self)
+        if self._active:
+            pygame.mixer.music.stop()
+            pygame.mixer.music.load(self.music_file)
+            pygame.mixer.music.play(-1 if self.loop else 0)
+            self._active = False
+            self._complete = True
+
+
 class End(Action):
     def __init__(self, stop_music=True):
         Action.__init__(self)
@@ -195,7 +299,7 @@ class End(Action):
     def on_execute(self):
         Action.on_execute(self)
         if self._active:
-            post_event(event=EVENT_CHANGE_LEVEL, mode=self.stage.next_level)
+            post_event(event=EVENT_CHANGE_LEVEL, mode=self.stage.next_stage)
             self._active = False
             self._complete = True
             if self.stop_music:
@@ -245,16 +349,18 @@ class StoryStage(Stage):
         human_ship = ActorHumanShip(self)
         human_ship.set_position(220, 200)
 
-        text_time = DisplayText(self, TEXT_YEAR, (None, 400), 'assets/fonts/PressStart2P-Regular.ttf', 15, COLOR_WHITE, False, TypeWriter(150, 'assets/sounds/08.ogg'))
-        text_book_1 = DisplayText(self, TEXT_STEAL_BOOKS_1, (None, 350), 'assets/fonts/PressStart2P-Regular.ttf', 15, COLOR_WHITE, False, TypeWriter(50))
-        text_book_2 = DisplayText(self, TEXT_STEAL_BOOKS_2, (None, 380), 'assets/fonts/PressStart2P-Regular.ttf', 15, COLOR_WHITE, False, TypeWriter(50))
-        text_hero = DisplayText(self, TEXT_HERO, (None, 350), 'assets/fonts/PressStart2P-Regular.ttf', 15, COLOR_WHITE, False, TypeWriter(50))
+        text_time = DisplayText(self, TEXT_YEAR, (0, 400), 'assets/fonts/PressStart2P-Regular.ttf', 15, COLOR_WHITE, False, TypeWriter(150, 'assets/sounds/08.ogg'), horizontal_align=CenterAlign)
+        text_book_1 = DisplayText(self, TEXT_STEAL_BOOKS_1, (0, 350), 'assets/fonts/PressStart2P-Regular.ttf', 15, COLOR_WHITE, False, TypeWriter(50), horizontal_align=CenterAlign)
+        text_book_2 = DisplayText(self, TEXT_STEAL_BOOKS_2, (0, 380), 'assets/fonts/PressStart2P-Regular.ttf', 15, COLOR_WHITE, False, TypeWriter(50), horizontal_align=CenterAlign)
+        text_hero = DisplayText(self, TEXT_HERO, (0, 350), 'assets/fonts/PressStart2P-Regular.ttf', 15, COLOR_WHITE, False, TypeWriter(50), horizontal_align=CenterAlign)
 
         self.actors = [book_01, book_02, book_03, book_04, book_05, evil_spaceship,
             tractor_beam, human_ship, text_time, text_book_1, text_book_2, text_hero]
 
         self.script = {
             0000: Background('assets/backgrounds/earth.png'),
+            0001: PlayMusic('assets/music/LongDarkLoop.ogg'),
+
             1000: ActorCommand(text_time, lambda x: x.show()),
             6000: ActorCommand(text_time, lambda x: x.hide()),
 
@@ -305,38 +411,10 @@ class StoryStage(Stage):
             47000: End(),
         }
 
-    def on_start(self):
-        Stage.on_start(self)
-        pygame.mixer.music.load('assets/music/LongDarkLoop.ogg')
-        pygame.mixer.music.play(-1)
-        for time, entry in self.script.items():
-            entry.on_setup(self)
-
-    def on_update(self):
-        for actor in self.actors:
-            actor.on_update(self.game.time_passed)
-
-        for time, entry in self.script.items():
-            entry.on_update(self.game.time_passed)
-            if pygame.time.get_ticks() > self._start_time + time:
-                entry.on_execute()
-
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
             pygame.mixer.music.stop()
-            post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_level)
-
-    def blit(self):
-        for time, entry in self.script.items():
-            try:
-                entry.on_blit()
-            except AttributeError:
-                pass
-
-        for actor in self.actors:
-            actor.on_blit()
-
-        self.game.surface.blit(self.canvas, (0, 0))
+            post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_stage)
 
 
 class StagePlanetTravel(Stage):
@@ -346,7 +424,7 @@ class StagePlanetTravel(Stage):
         human_ship = ActorHumanShip(self)
         human_ship.set_position(150, 448)
 
-        planet_name = DisplayText(self, self.planet_name, (None, 400), 'assets/fonts/PressStart2P-Regular.ttf', 15, COLOR_WHITE, False, TypeWriter(150, 'assets/sounds/19.ogg'))
+        planet_name = DisplayText(self, self.planet_name, (0, 400), 'assets/fonts/PressStart2P-Regular.ttf', 15, COLOR_WHITE, False, TypeWriter(150, 'assets/sounds/19.ogg'), horizontal_align=CenterAlign)
 
         self.actors = [human_ship, planet_name]
 
@@ -387,32 +465,29 @@ class StagePlanetTravel(Stage):
             15500: End(),
         }
 
-    def on_start(self):
-        Stage.on_start(self)
-        for time, entry in self.script.items():
-            entry.on_setup(self)
+    def on_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_stage)
 
-    def on_update(self):
-        for actor in self.actors:
-            actor.on_update(self.game.time_passed)
 
-        for time, entry in self.script.items():
-            entry.on_update(self.game.time_passed)
-            if pygame.time.get_ticks() > self._start_time + time:
-                entry.on_execute()
+class StageTitle(Stage):
+    def __init__(self, *args, **kwargs):
+        Stage.__init__(self, *args, **kwargs)
+
+        text_press_enter = DisplayText(self, START_MESSAGE_TEXT, (0, 80), 'assets/fonts/PressStart2P-Regular.ttf', 24, COLOR_WHITE, False, Blink(200), horizontal_align=CenterAlign, vertical_align=BottomtAlign)
+        text_credit = DisplayText(self, CREDITS_TEXT, (0, 18), 'assets/fonts/PressStart2P-Regular.ttf', 9, COLOR_WHITE, False, horizontal_align=CenterAlign, vertical_align=BottomtAlign)
+        text_version = DisplayText(self, get_version(), (100, 18), 'assets/fonts/PressStart2P-Regular.ttf', 9, COLOR_WHITE, False, horizontal_align=RightAlign, vertical_align=BottomtAlign)
+
+        self.actors = [text_press_enter, text_credit, text_version]
+
+        self.script = {
+            0000: Background('assets/backgrounds/game_title.png', fit=True),
+            0001: PlayMusic('assets/music/OveMelaaTranceBitBit.ogg', loop=True),
+            0002: ActorCommand(text_press_enter, lambda x: x.show()),
+            0003: ActorCommand(text_credit, lambda x: x.show()),
+            0004: ActorCommand(text_version, lambda x: x.show()),
+        }
 
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
-            post_event(event=EVENT_CHANGE_LEVEL, mode=GAME_LEVEL_FIRST)
-
-    def blit(self):
-        for time, entry in self.script.items():
-            try:
-                entry.on_blit()
-            except AttributeError:
-                pass
-
-        for actor in self.actors:
-            actor.on_blit()
-
-        self.game.surface.blit(self.canvas, (0, 0))
+            post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_stage)

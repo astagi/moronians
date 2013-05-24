@@ -11,7 +11,6 @@ from .exceptions import SwallowEvent
 from .events import (EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, EVENT_STORY_SCRIPT_CAPTION,
     EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
     EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, EVENT_CHANGE_LEVEL)
-from .levels import TitleScreen
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT,
     PAUSE_TEXT_VERTICAL_OFFSET, START_MESSAGE_TEXT, GAME_LEVEL_TITLE,
@@ -19,7 +18,7 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     EXIT_TEXT_VERTICAL_OFFSET)
 from .sprites import SpritePlayer
 from .stages import StoryStage
-from .utils import hollow_text, outlined_text, post_event, check_event, Timer
+from .utils import hollow_text, outlined_text, post_event, check_event
 from .vec2d import vec2d
 from utils.importlib import import_module
 
@@ -118,11 +117,10 @@ class Game(object):
             self.on_render()
 
     def on_loop(self):
-        Timer.check_expired()
         self.module.modes[self._current_level].on_update()
 
     def on_blit(self):
-        self.module.modes[self._current_level].blit()
+        self.module.modes[self._current_level].on_blit()
 
         if self.exit_confirm:
             self.exit_confirmation(self.pause_font)

@@ -1,11 +1,11 @@
 from libraries.events import EVENT_CHANGE_LEVEL
-from libraries.levels import PlayLevel, TitleScreen
+from libraries.levels import PlayLevel
 from libraries.literals import GAME_LEVEL_TITLE, GAME_LEVEL_STORY
 from libraries.maps import Map1, Map2, Map3, Map4
 from libraries.sprites import (EnemyArachnid, EnemyEyePod, EnemyFlyingBot, EnemyRedSlime,
-    PowerUpApple, PowerUpShield, SpriteDarkBoss)
-from libraries.stages import StoryStage, StagePlanetTravel
-from libraries.utils import hollow_text, outlined_text, post_event, check_event, Timer
+    SpriteDarkBoss)
+from libraries.stages import StoryStage, StageTitle, StagePlanetTravel
+from libraries.utils import hollow_text, outlined_text, post_event, check_event
 
 from modules.classes import ModuleBase
 
@@ -19,9 +19,9 @@ class Module(ModuleBase):
     def __init__(self, game):
         self.game = game
         self.modes = {
-            GAME_LEVEL_TITLE: TitleScreen(game, next_level=GAME_LEVEL_STORY),
-            GAME_LEVEL_STORY: StoryStage(game, next_level=GAME_LEVEL_TRAVEL),
-            GAME_LEVEL_TRAVEL: StageFirenius(game, next_level=GAME_LEVEL_SPANISH_ENGLISH_LEVEL),
+            GAME_LEVEL_TITLE: StageTitle(game=game, next_stage=GAME_LEVEL_STORY),
+            GAME_LEVEL_STORY: StoryStage(game, next_stage=GAME_LEVEL_TRAVEL),
+            GAME_LEVEL_TRAVEL: StageFirenius(game, next_stage=GAME_LEVEL_SPANISH_ENGLISH_LEVEL),
             GAME_LEVEL_SPANISH_ENGLISH_LEVEL: SpanishEnglishLevel(game=game, player=game.player),
             GAME_LEVEL_SPANISH_ENGLISH_BOSS: SpanishEnglishBossLevel(game=game, player=game.player),
         }

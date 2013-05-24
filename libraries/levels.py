@@ -17,7 +17,7 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     LEVEL_MODE_STOPPED, LEVEL_MODE_RUNNING, LEVEL_MODE_COMPLETE,
     LEVEL_MODE_PLAYER_DEATH, LEVEL_MODE_GAME_OVER, GAME_LEVEL_FIRST,
     TEXT_STEAL_BOOKS_1, TEXT_STEAL_BOOKS_2, TEXT_HERO)
-from .sprites import PowerUpApple, PowerUpShield
+from .powerups import PowerUpApple, PowerUpShield
 from .utils import check_event, hollow_text, outlined_text, post_event
 
 
@@ -36,58 +36,6 @@ class Level(object):
 
     def process_event(self, event):
         pass
-
-
-class TitleScreen(Level):
-    def __init__(self, game, next_level=None):
-        self.game = game
-        image = pygame.image.load('assets/backgrounds/game_title.png').convert()
-        self.title_image = background = pygame.transform.scale(image, (self.game.surface.get_size()[0], self.game.surface.get_size()[1]))
-        self.show_start_message = True
-        self.font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 24)
-        self.credit_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 9)
-        self.version_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 9)
-        self.title_delay = 1000 / 5  # 5 FPS
-        self.title_last_update = 0
-        if next_level:
-            self.next_level = next_level
-
-    def on_start(self):
-        pygame.mixer.music.load('assets/music/OveMelaaTranceBitBit.ogg')
-        pygame.mixer.music.play(-1)
-        self.game.player.reset()
-
-    def on_update(self):
-        t = pygame.time.get_ticks()
-        if t - self.title_last_update > self.title_delay:
-            self.show_start_message = not self.show_start_message
-            self.title_last_update = t
-
-    def blit(self):
-        # Redraw the background
-        self.game.surface.blit(self.title_image, (0, 0))
-
-        if self.show_start_message:
-            text_size = self.font.size(START_MESSAGE_TEXT)
-            label = self.font.render(START_MESSAGE_TEXT, 1, COLOR_WHITE)
-            self.game.surface.blit(label, (self.game.surface.get_size()[0] / 2 - text_size[0] / 2, self.game.surface.get_size()[1] - 60))
-
-        text_size = self.credit_font.size(CREDITS_TEXT)
-        label = self.credit_font.render(CREDITS_TEXT, 1, COLOR_WHITE)
-        self.game.surface.blit(label, (self.game.surface.get_size()[0] / 2 - text_size[0] / 2, self.game.surface.get_size()[1] - 20))
-
-        text_size = self.credit_font.size(get_version())
-        label = self.credit_font.render(get_version(), 1, COLOR_WHITE)
-        self.game.surface.blit(label, (self.game.surface.get_size()[0] - text_size[0] - 8, self.game.surface.get_size()[1] - 20))
-
-    def on_event(self, event):
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RETURN:
-                pygame.mixer.music.stop()
-                post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_level)
-
-    def on_exit(self):
-        pygame.mixer.music.stop()
 
 
 class PlayLevel(Level):
@@ -195,7 +143,7 @@ class PlayLevel(Level):
             if pygame.time.get_ticks() > self._time_level_complete + 10000:
                 post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_level)
 
-    def blit(self):
+    def on_blit(self):
         # Redraw the background
         self.game.display_tile_map(self.map)
 
