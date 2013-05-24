@@ -25,3 +25,12 @@ to play one of the two included modules
 Arrows keys to move
 Escape to exit the game
 Pause/Break key to pause the game
+
+
+Screenshots
+-----------
+![Title screen](https://raw.github.com/rosarior/moronians/master/docs/_static_/title_screen.png)
+![Story](https://raw.github.com/rosarior/moronians/master/docs/_static_/story_1.png)
+![Story](https://raw.github.com/rosarior/moronians/master/docs/_static_/story_2.png)
+![Game play](https://raw.github.com/rosarior/moronians/master/docs/_static_/stage.png)
+![Boss battle](https://raw.github.com/rosarior/moronians/master/docs/_static_/boss.png)
