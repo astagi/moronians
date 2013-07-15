@@ -29,7 +29,7 @@ class Module(ModuleBase):
 
 class StageFirenius(StagePlanetTravel):
     planet_name = TEXT_PLANET_01_NAME
-    background_file = 'assets/backgrounds/planet_1_0.png'
+    background_file = 'assets/backgrounds/planet_red.png'
 
 
 class SpanishEnglishLevel(PlayLevel):
