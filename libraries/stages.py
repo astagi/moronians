@@ -14,7 +14,7 @@ from .events import (EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP,
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT,
     PAUSE_TEXT_VERTICAL_OFFSET,
-    START_MESSAGE_TEXT, TEXT_YEAR, GAME_LEVEL_STORY,
+    START_MESSAGE_TEXT, TEXT_YEAR, GAME_FONT, GAME_LEVEL_STORY,
     GAME_LEVEL_TITLE, GAME_LEVEL_FIRST, VERSION_TEXT, CREDITS_TEXT, TEXT_LEVEL_COMPLETE,
     LEVEL_MODE_STOPPED, LEVEL_MODE_RUNNING, LEVEL_MODE_COMPLETE,
     LEVEL_MODE_PLAYER_DEATH, LEVEL_MODE_GAME_OVER, GAME_LEVEL_FIRST,
@@ -350,10 +350,10 @@ class StoryStage(Stage):
         human_ship = ActorHumanShip(self)
         human_ship.set_position(220, 200)
 
-        text_time = DisplayText(self, TEXT_YEAR, (0, 400), 'assets/fonts/PressStart2P-Regular.ttf', 15, COLOR_WHITE, False, TypeWriter(150, 'assets/sounds/08.ogg'), horizontal_align=CenterAlign)
-        text_book_1 = DisplayText(self, TEXT_STEAL_BOOKS_1, (0, 350), 'assets/fonts/PressStart2P-Regular.ttf', 15, COLOR_WHITE, False, TypeWriter(50), horizontal_align=CenterAlign)
-        text_book_2 = DisplayText(self, TEXT_STEAL_BOOKS_2, (0, 380), 'assets/fonts/PressStart2P-Regular.ttf', 15, COLOR_WHITE, False, TypeWriter(50), horizontal_align=CenterAlign)
-        text_hero = DisplayText(self, TEXT_HERO, (0, 350), 'assets/fonts/PressStart2P-Regular.ttf', 15, COLOR_WHITE, False, TypeWriter(50), horizontal_align=CenterAlign)
+        text_time = DisplayText(self, TEXT_YEAR, (0, 400), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(150, 'assets/sounds/08.ogg'), horizontal_align=CenterAlign)
+        text_book_1 = DisplayText(self, TEXT_STEAL_BOOKS_1, (0, 350), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(50), horizontal_align=CenterAlign)
+        text_book_2 = DisplayText(self, TEXT_STEAL_BOOKS_2, (0, 380), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(50), horizontal_align=CenterAlign)
+        text_hero = DisplayText(self, TEXT_HERO, (0, 350), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(50), horizontal_align=CenterAlign)
 
         self.actors = [book_01, book_02, book_03, book_04, book_05, evil_spaceship,
             tractor_beam, human_ship, text_time, text_book_1, text_book_2, text_hero]
@@ -425,7 +425,7 @@ class StagePlanetTravel(Stage):
         human_ship = ActorHumanShip(self)
         human_ship.set_position(150, 448)
 
-        planet_name = DisplayText(self, self.planet_name, (0, 400), 'assets/fonts/PressStart2P-Regular.ttf', 15, COLOR_WHITE, False, TypeWriter(150, 'assets/sounds/19.ogg'), horizontal_align=CenterAlign)
+        planet_name = DisplayText(self, self.planet_name, (0, 400), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(150, 'assets/sounds/19.ogg'), horizontal_align=CenterAlign)
 
         self.actors = [human_ship, planet_name]
 
@@ -475,9 +475,9 @@ class StageTitle(Stage):
     def __init__(self, *args, **kwargs):
         Stage.__init__(self, *args, **kwargs)
 
-        text_press_enter = DisplayText(self, START_MESSAGE_TEXT, (0, 80), 'assets/fonts/PressStart2P-Regular.ttf', 24, COLOR_WHITE, False, Blink(200), horizontal_align=CenterAlign, vertical_align=BottomtAlign)
-        text_credit = DisplayText(self, CREDITS_TEXT, (0, 18), 'assets/fonts/PressStart2P-Regular.ttf', 9, COLOR_WHITE, False, horizontal_align=CenterAlign, vertical_align=BottomtAlign)
-        text_version = DisplayText(self, get_version(), (100, 18), 'assets/fonts/PressStart2P-Regular.ttf', 9, COLOR_WHITE, False, horizontal_align=RightAlign, vertical_align=BottomtAlign)
+        text_press_enter = DisplayText(self, START_MESSAGE_TEXT, (0, 80), GAME_FONT, 24, COLOR_WHITE, False, Blink(200), horizontal_align=CenterAlign, vertical_align=BottomtAlign)
+        text_credit = DisplayText(self, CREDITS_TEXT, (0, 18), GAME_FONT, 9, COLOR_WHITE, False, horizontal_align=CenterAlign, vertical_align=BottomtAlign)
+        text_version = DisplayText(self, get_version(), (100, 18), GAME_FONT, 9, COLOR_WHITE, False, horizontal_align=RightAlign, vertical_align=BottomtAlign)
 
         self.actors = [text_press_enter, text_credit, text_version]
 
