@@ -12,7 +12,7 @@ from .events import (EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP,
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT,
     PAUSE_TEXT_VERTICAL_OFFSET,
-    START_MESSAGE_TEXT, TEXT_YEAR, GAME_LEVEL_STORY,
+    START_MESSAGE_TEXT, TEXT_YEAR, GAME_FONT, GAME_LEVEL_STORY,
     GAME_LEVEL_TITLE, GAME_LEVEL_FIRST, VERSION_TEXT, CREDITS_TEXT, TEXT_LEVEL_COMPLETE,
     LEVEL_MODE_STOPPED, LEVEL_MODE_RUNNING, LEVEL_MODE_COMPLETE,
     LEVEL_MODE_PLAYER_DEATH, LEVEL_MODE_GAME_OVER, GAME_LEVEL_FIRST,
@@ -41,7 +41,7 @@ class Level(object):
 class PlayLevel(Level):
     def __init__(self, game, next_level=None):
         self.game = game
-        self.game_over_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 32)
+        self.game_over_font = pygame.font.Font(GAME_FONT, 32)
         self.result = []
         self.stage_score_value = 0
         self.mode = LEVEL_MODE_STOPPED
