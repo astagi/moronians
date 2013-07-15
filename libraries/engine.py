@@ -12,7 +12,7 @@ from .events import (EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, EVENT_STORY_SCRIPT_CA
     EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
     EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, EVENT_CHANGE_LEVEL)
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
-    DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT,
+    DEFAULT_SCREENSIZE, GAME_FONT, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT,
     PAUSE_TEXT_VERTICAL_OFFSET, START_MESSAGE_TEXT, GAME_LEVEL_TITLE,
     GAME_LEVEL_STORY, TEXT_EXIT_CONFIRMATION,
     EXIT_TEXT_VERTICAL_OFFSET)
@@ -43,10 +43,10 @@ class Game(object):
         self._screen = pygame.display.set_mode(DEFAULT_SCREENSIZE, pygame.HWSURFACE | pygame.DOUBLEBUF)  # | pygame.FULLSCREEN)
         self.surface = pygame.Surface(self._screen.get_size())
         self.running = True
-        self.font_debug = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
-        self.pause_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 15)
-        self.enemy_font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
-        self.font = pygame.font.Font('assets/fonts/PressStart2P-Regular.ttf', 12)
+        self.font_debug = pygame.font.Font(GAME_FONT, 12)
+        self.pause_font = pygame.font.Font(GAME_FONT, 15)
+        self.enemy_font = pygame.font.Font(GAME_FONT, 12)
+        self.font = pygame.font.Font(GAME_FONT, 12)
         self.pause_sound = pygame.mixer.Sound('assets/sounds/pause.wav')
         self.player = SpritePlayer(self)
         pygame.display.set_caption(GAME_TITLE)
