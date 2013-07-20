@@ -23,13 +23,13 @@ class Module(ModuleBase):
         self.modes = {
             GAME_LEVEL_TITLE: StageTitle(game=game, next_stage=GAME_LEVEL_STORY),
             GAME_LEVEL_STORY: StoryStage(game, next_stage=GAME_LEVEL_TRAVEL),
-            GAME_LEVEL_TRAVEL: StageFirenius(game, next_stage=GAME_LEVEL_SPANISH_ENGLISH_LEVEL),
+            GAME_LEVEL_TRAVEL: StageYellonious(game, next_stage=GAME_LEVEL_SPANISH_ENGLISH_LEVEL),
             GAME_LEVEL_SPANISH_ENGLISH_LEVEL: SpanishEnglishLevel(game=game, player=game.player),
             GAME_LEVEL_SPANISH_ENGLISH_BOSS: SpanishEnglishBossLevel(game=game, player=game.player),
         }
 
 
-class StageFirenius(StagePlanetTravel):
+class StageYellonious(StagePlanetTravel):
     planet_name = TEXT_PLANET_01_NAME
     background_file = 'assets/backgrounds/planet_yellow.png'
 
