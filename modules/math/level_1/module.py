@@ -120,7 +120,7 @@ class AdditionBossLevel(PlayLevel):
         self.player = player
         self.boss_class = SpriteDarkBoss
         self.stage_score_value = 400
-        self.question_function = lambda: formula_generator(OPERATOR_ADD, range_1=(0, 6), range_2=(0, 6))
+        self.question_function = lambda: formula_generator(OPERATOR_ADD, range_1=(0, 12), range_2=(0, 6))
         self.enemy_attack_points = 5
 
 
@@ -173,7 +173,7 @@ class SubstractionBossLevel(PlayLevel):
         self.player = player
         self.boss_class = SpriteBoss2
         self.stage_score_value = 800
-        self.question_function = lambda: formula_generator(OPERATOR_SUB, range_1=(0, 6), range_2=(0, 6), big_endian=True)
+        self.question_function = lambda: formula_generator(OPERATOR_SUB, range_1=(0, 15), range_2=(0, 6), big_endian=True)
         self.enemy_attack_points = 5
 
 

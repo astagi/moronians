@@ -540,10 +540,12 @@ class EndStage(Stage):
 
         text_hero_11 = DisplayText(self, 'THANKS FOR PLAYING', (0, 220), GAME_FONT, 18, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
 
+        text_score = DisplayText(self, 'FINAL SCORE: %d' % self.game.player.score, (0, 100), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
+
         self.actors = [book_01, book_02, book_03, book_04, book_05, evil_spaceship,
             tractor_beam, human_ship, text_hero_1, text_hero_2, text_hero_3,
             text_hero_4, text_hero_5, text_hero_6, text_hero_7, text_hero_8,
-            text_hero_9, text_hero_10, text_hero_11]
+            text_hero_9, text_hero_10, text_hero_11, text_score]
 
         self.script = {
             0000: Background('assets/backgrounds/earth.png'),
@@ -593,6 +595,9 @@ class EndStage(Stage):
             61000: ActorCommand(text_hero_10, lambda x: x.hide()),
 
             62000: ActorCommand(text_hero_11, lambda x: x.show()),
+
+            2000: ActorCommand(text_score, lambda x: x.show()),
+
 
             72000: End(),
         }
