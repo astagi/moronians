@@ -16,6 +16,8 @@ from .literals import (GAME_LEVEL_TRAVEL, GAME_LEVEL_STORY, GAME_LEVEL_TITLE,
 
 
 class Module(ModuleBase):
+    first_game_level = GAME_LEVEL_TITLE
+
     def __init__(self, game):
         self.game = game
         self.modes = {
