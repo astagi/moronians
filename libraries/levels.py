@@ -39,6 +39,9 @@ class Level(object):
 
 
 class PlayLevel(Level):
+    boss_song = 'assets/music/hold the line_1.ogg'
+    normal_song = 'assets/music/Zander Noriega - Darker Waves_0_looping.wav'
+
     def __init__(self, game, next_level=None):
         self.game = game
         self.game_over_font = pygame.font.Font(GAME_FONT, 32)
@@ -54,9 +57,9 @@ class PlayLevel(Level):
 
     def on_start(self):
         if self.boss_level:
-            pygame.mixer.music.load('assets/music/hold the line_1.ogg')
+            pygame.mixer.music.load(self.boss_song)
         else:
-            pygame.mixer.music.load('assets/music/Zander Noriega - Darker Waves_0_looping.wav')
+            pygame.mixer.music.load(self.normal_song)
         pygame.mixer.music.play(-1)
         self.accept_input = True
         self.is_game_over = False
@@ -141,6 +144,7 @@ class PlayLevel(Level):
                 self.display_level_complete = True
 
             if pygame.time.get_ticks() > self._time_level_complete + 10000:
+                self.game.get_current_level().player.reset_scroll()
                 post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_level)
 
     def on_blit(self):

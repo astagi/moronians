@@ -247,6 +247,9 @@ class SpritePlayer(SpriteCustom):
             self.scroll_original_position = self.scroll_position
             self._time_win_time = pygame.time.get_ticks()
 
+    def reset_scroll(self):
+        self.has_scroll = False
+
     def take_damage(self, enemy):
         if self._state == PLAYER_STATE_ALIVE:
             displacement = vec2d(
@@ -427,6 +430,8 @@ class EnemyFlyingBot(SpriteEnemy):
 
 
 class SpriteBoss(SpriteEnemy):
+    enemy_class = EnemyEyePod
+
     def __init__(self, game, font, init_position):
         pygame.sprite.Sprite.__init__(self)
         self.image = self.images[0]
@@ -448,16 +453,16 @@ class SpriteBoss(SpriteEnemy):
 
     def update(self, time_passed, force=False):
         if self._state == ENEMY_STATE_ALIVE:
-            if pygame.time.get_ticks() > self._move_time + 1000:
+            if pygame.time.get_ticks() > self._move_time + self.firing_delay:
                 self._state = ENEMY_STATE_FIRING
                 self._time_fire = pygame.time.get_ticks()
 
         if self._state == ENEMY_STATE_FIRING:
-            if pygame.time.get_ticks() > self._time_fire + 200:
+            if pygame.time.get_ticks() > self._time_fire + self.firing_animation_delay:
                 self.image = self.images[0]
                 self._state = ENEMY_STATE_ALIVE
                 self._move_time = pygame.time.get_ticks()
-                self.game.get_current_level().spawn_enemy(EnemyEyePod, origin_point=(self.pos[0] + self.image.get_size()[0] / 2, self.pos[1] + self.image.get_size()[1]), speed=EnemyEyePod.speed * 8)
+                self.game.get_current_level().spawn_enemy(self.enemy_class, origin_point=(self.pos[0] + self.image.get_size()[0] / 2, self.pos[1] + self.image.get_size()[1]), speed=self.enemy_class.speed * 8)
             else:
                 self.image = self.images[1]
 
@@ -542,8 +547,12 @@ class SpriteBoss(SpriteEnemy):
 
 
 class SpriteDarkBoss(SpriteBoss):
+    enemy_class = EnemyEyePod
+
+    firing_animation_delay = 150
+    firing_delay = 1000
     images = SpriteEnemy.load_sliced_sprites(122, 110, 'enemies/dark_boss_strip.png')
     values = 5000
-    attack_points = 115
+    attack_points = 20
     speed = 0.1
-    hit_points = total_hit_points = 50
+    hit_points = total_hit_points = 150
