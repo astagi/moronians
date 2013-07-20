@@ -431,6 +431,9 @@ class EnemyFlyingBot(SpriteEnemy):
 
 class SpriteBoss(SpriteEnemy):
     enemy_class = EnemyEyePod
+    spawned_enemy_speed = EnemyEyePod.speed * 8
+    # Calculate initial direction
+    direction = vec2d(1, 0)  # To the right
 
     def __init__(self, game, font, init_position):
         pygame.sprite.Sprite.__init__(self)
@@ -448,9 +451,6 @@ class SpriteBoss(SpriteEnemy):
         self.sound_hit = pygame.mixer.Sound('assets/enemies/zombie-5.wav')
         self.death_scream_done = False
 
-        # Calculate initial direction
-        self.direction = vec2d(1, 0)  # To the right
-
     def update(self, time_passed, force=False):
         if self._state == ENEMY_STATE_ALIVE:
             if pygame.time.get_ticks() > self._move_time + self.firing_delay:
@@ -462,7 +462,7 @@ class SpriteBoss(SpriteEnemy):
                 self.image = self.images[0]
                 self._state = ENEMY_STATE_ALIVE
                 self._move_time = pygame.time.get_ticks()
-                self.game.get_current_level().spawn_enemy(self.enemy_class, origin_point=(self.pos[0] + self.image.get_size()[0] / 2, self.pos[1] + self.image.get_size()[1]), speed=self.enemy_class.speed * 8)
+                self.game.get_current_level().spawn_enemy(self.enemy_class, origin_point=(self.pos[0] + self.image.get_size()[0] / 2, self.pos[1] + self.image.get_size()[1]), speed=self.spawned_enemy_speed)
             else:
                 self.image = self.images[1]
 
@@ -478,26 +478,30 @@ class SpriteBoss(SpriteEnemy):
                 self.direction.y * self.speed * time_passed
             )
 
-            self.pos += displacement
-            self.rect.topleft = [self.pos.x, self.pos.y]
-            self.image_w, self.image_h = self.image.get_size()
-            bounds_rect = self.game.surface.get_rect().inflate(-self.image_w, -self.image_h)
-
-            if self.pos.x < bounds_rect.left:
-                self.pos.x = bounds_rect.left
-                self.direction.x *= -1
-            elif self.pos.x > bounds_rect.right:
-                self.pos.x = bounds_rect.right
-                self.direction.x *= -1
-            elif self.pos.y < bounds_rect.top:
-                self.pos.y = bounds_rect.top
-                self.direction.y *= -1
-            elif self.pos.y > bounds_rect.bottom:
-                self.pos.y = bounds_rect.bottom
-                self.direction.y *= -1
+            self.calculate_movement(displacement)
 
             if pygame.sprite.collide_mask(self, self.game.get_current_level().player) and self.alive:
                 self.game.get_current_level().player.take_damage(self)
+
+    def calculate_movement(self, displacement):
+        self.pos += displacement
+        self.rect.topleft = [self.pos.x, self.pos.y]
+        self.image_w, self.image_h = self.image.get_size()
+        bounds_rect = self.game.surface.get_rect().inflate(-self.image_w, -self.image_h)
+
+        if self.pos.x < bounds_rect.left:
+            self.pos.x = bounds_rect.left
+            self.direction.x *= -1
+        elif self.pos.x > bounds_rect.right:
+            self.pos.x = bounds_rect.right
+            self.direction.x *= -1
+        elif self.pos.y < bounds_rect.top:
+            self.pos.y = bounds_rect.top
+            self.direction.y *= -1
+        elif self.pos.y > bounds_rect.bottom:
+            self.pos.y = bounds_rect.bottom
+            self.direction.y *= -1
+
 
     def blit(self):
         self.game.surface.blit(self.image, (self.pos.x, self.pos.y))
@@ -552,6 +556,20 @@ class SpriteDarkBoss(SpriteBoss):
     firing_animation_delay = 150
     firing_delay = 1000
     images = SpriteEnemy.load_sliced_sprites(122, 110, 'enemies/dark_boss_strip.png')
+    values = 5000
+    attack_points = 20
+    speed = 0.1
+    hit_points = total_hit_points = 150
+
+
+class SpriteBoss2(SpriteBoss):
+    direction = vec2d(0, 1)  # Down
+
+    enemy_class = EnemyRedSlime
+
+    firing_animation_delay = 150
+    firing_delay = 1000
+    images = SpriteEnemy.load_sliced_sprites(80, 96, 'enemies/genie_boss_strip.png')
     values = 5000
     attack_points = 20
     speed = 0.1

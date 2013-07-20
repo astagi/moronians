@@ -3,7 +3,7 @@ from libraries.levels import PlayLevel
 from libraries.literals import GAME_LEVEL_TITLE, GAME_LEVEL_STORY
 from libraries.maps import Map1, Map2, Map3, Map4
 from libraries.sprites import (EnemyArachnid, EnemyEyePod, EnemyFlyingBot,
-    EnemyRedSlime, SpriteDarkBoss)
+    EnemyRedSlime, SpriteDarkBoss, SpriteBoss2)
 from libraries.stages import StoryStage, StageTitle, StagePlanetTravel
 from libraries.utils import hollow_text, outlined_text, post_event, check_event
 
@@ -16,6 +16,8 @@ from .literals import GAME_LEVEL_MULTIPLICATION_LEVEL1, GAME_LEVEL_MULTIPLICATIO
 from .literals import GAME_LEVEL_DIVISION_LEVEL1, GAME_LEVEL_DIVISION_LEVEL2, GAME_LEVEL_DIVISION_LEVEL3, GAME_LEVEL_DIVISION_BOSS
 from .literals import GAME_LEVEL_BLUE_PLANET, TEXT_PLANET_BLUE_NAME
 from .literals import GAME_LEVEL_RED_PLANET, TEXT_PLANET_RED_NAME
+from .literals import GAME_LEVEL_GREEN_PLANET, TEXT_PLANET_GREEN_NAME
+from .literals import GAME_LEVEL_SAND_PLANET, TEXT_PLANET_SAND_NAME
 from .literals import OPERATOR_ADD, OPERATOR_SUB, OPERATOR_MUL, OPERATOR_DIV
 
 
@@ -25,7 +27,7 @@ class Module(ModuleBase):
     def __init__(self, game):
         self.game = game
         self.modes = {
-            GAME_LEVEL_TITLE: StageTitle(game=game, next_stage=GAME_LEVEL_RED_PLANET),
+            GAME_LEVEL_TITLE: StageTitle(game=game, next_stage=GAME_LEVEL_SUBSTRACTION_BOSS),
 
             #GAME_LEVEL_TITLE: StageTitle(game=game, next_stage=GAME_LEVEL_STORY),
 
@@ -40,17 +42,19 @@ class Module(ModuleBase):
             GAME_LEVEL_SUBSTRACTION_LEVEL1: SubstractionLevel1(game=game, player=game.player, next_level=GAME_LEVEL_SUBSTRACTION_LEVEL2),
             GAME_LEVEL_SUBSTRACTION_LEVEL2: SubstractionLevel2(game=game, player=game.player, next_level=GAME_LEVEL_SUBSTRACTION_LEVEL3),
             GAME_LEVEL_SUBSTRACTION_LEVEL3: SubstractionLevel3(game=game, player=game.player, next_level=GAME_LEVEL_SUBSTRACTION_BOSS),
-            GAME_LEVEL_SUBSTRACTION_BOSS: SubstractionBossLevel(game=game, player=game.player, next_level=GAME_LEVEL_RED_PLANET),
+            GAME_LEVEL_SUBSTRACTION_BOSS: SubstractionBossLevel(game=game, player=game.player, next_level=GAME_LEVEL_TITLE),
 
-            GAME_LEVEL_MULTIPLICATION_LEVEL1: MultiplicationLevel1(game=game, player=game.player),
-            GAME_LEVEL_MULTIPLICATION_LEVEL2: MultiplicationLevel2(game=game, player=game.player),
-            GAME_LEVEL_MULTIPLICATION_LEVEL3: MultiplicationLevel3(game=game, player=game.player),
-            GAME_LEVEL_MULTIPLICATION_BOSS: MultiplicationBossLevel(game=game, player=game.player, next_level=GAME_LEVEL_RED_PLANET),
+            GAME_LEVEL_GREEN_PLANET: StageGreenPlanet(game, next_stage=GAME_LEVEL_MULTIPLICATION_LEVEL1),
+            GAME_LEVEL_MULTIPLICATION_LEVEL1: MultiplicationLevel1(game=game, player=game.player, next_level=GAME_LEVEL_MULTIPLICATION_LEVEL2),
+            GAME_LEVEL_MULTIPLICATION_LEVEL2: MultiplicationLevel2(game=game, player=game.player, next_level=GAME_LEVEL_MULTIPLICATION_LEVEL3),
+            GAME_LEVEL_MULTIPLICATION_LEVEL3: MultiplicationLevel3(game=game, player=game.player, next_level=GAME_LEVEL_MULTIPLICATION_BOSS),
+            GAME_LEVEL_MULTIPLICATION_BOSS: MultiplicationBossLevel(game=game, player=game.player, next_level=GAME_LEVEL_SAND_PLANET),
 
-            GAME_LEVEL_DIVISION_LEVEL1: DivisionLevel1(game=game, player=game.player),
-            GAME_LEVEL_DIVISION_LEVEL2: DivisionLevel2(game=game, player=game.player),
-            GAME_LEVEL_DIVISION_LEVEL3: DivisionLevel3(game=game, player=game.player),
-            GAME_LEVEL_DIVISION_BOSS: DivisionBossLevel(game=game, player=game.player, next_level=GAME_LEVEL_RED_PLANET),
+            GAME_LEVEL_SAND_PLANET: StageSandPlanet(game, next_stage=GAME_LEVEL_DIVISION_LEVEL1),
+            GAME_LEVEL_DIVISION_LEVEL1: DivisionLevel1(game=game, player=game.player, next_level=GAME_LEVEL_DIVISION_LEVEL2),
+            GAME_LEVEL_DIVISION_LEVEL2: DivisionLevel2(game=game, player=game.player, next_level=GAME_LEVEL_DIVISION_LEVEL3),
+            GAME_LEVEL_DIVISION_LEVEL3: DivisionLevel3(game=game, player=game.player, next_level=GAME_LEVEL_DIVISION_BOSS),
+            GAME_LEVEL_DIVISION_BOSS: DivisionBossLevel(game=game, player=game.player, next_level=GAME_LEVEL_TITLE),
         }
 
 
@@ -62,6 +66,16 @@ class StageBluePlanet(StagePlanetTravel):
 class StageRedPlanet(StagePlanetTravel):
     planet_name = TEXT_PLANET_RED_NAME
     background_file = 'assets/backgrounds/planet_red.png'
+
+
+class StageGreenPlanet(StagePlanetTravel):
+    planet_name = TEXT_PLANET_GREEN_NAME
+    background_file = 'assets/backgrounds/planet_green.png'
+
+
+class StageSandPlanet(StagePlanetTravel):
+    planet_name = TEXT_PLANET_SAND_NAME
+    background_file = 'assets/backgrounds/planet_sand.png'
 
 
 class AdditionLevel1(PlayLevel):
@@ -110,6 +124,8 @@ class AdditionBossLevel(PlayLevel):
 
 
 class SubstractionLevel1(PlayLevel):
+    normal_song = 'assets/music/8-Bit Ninja.mp3'
+
     def __init__(self, player, **kwargs):
         super(self.__class__, self).__init__(**kwargs)
         self.map = Map2()
@@ -121,6 +137,8 @@ class SubstractionLevel1(PlayLevel):
 
 
 class SubstractionLevel2(PlayLevel):
+    normal_song = 'assets/music/8-Bit Ninja.mp3'
+
     def __init__(self, player, **kwargs):
         super(self.__class__, self).__init__(**kwargs)
         self.map = Map2()
@@ -132,6 +150,8 @@ class SubstractionLevel2(PlayLevel):
 
 
 class SubstractionLevel3(PlayLevel):
+    normal_song = 'assets/music/8-Bit Ninja.mp3'
+
     def __init__(self, player, **kwargs):
         super(self.__class__, self).__init__(**kwargs)
         self.map = Map2()
@@ -143,12 +163,14 @@ class SubstractionLevel3(PlayLevel):
 
 
 class SubstractionBossLevel(PlayLevel):
+    boss_song = 'assets/music/CPU Showdown_1.mp3'
+
     def __init__(self, player, **kwargs):
         super(self.__class__, self).__init__(**kwargs)
-        self.map = Map1()
+        self.map = Map2()
         self.boss_level = True
         self.player = player
-        self.boss_class = SpriteDarkBoss
+        self.boss_class = SpriteBoss2
         self.stage_score_value = 800
         self.question_function = lambda: formula_generator(OPERATOR_SUB, range_1=(0, 6), range_2=(0, 6), big_endian=True)
         self.enemy_attack_points = 5
