@@ -7,7 +7,8 @@ import pygame
 
 from . import get_version
 from .actors import (ActorSpaceship, ActorTracktorBeam, ActorBook01,
-    ActorBook02, ActorBook03, ActorBook04, ActorBook05, ActorHumanShip)
+    ActorBook02, ActorBook03, ActorBook04, ActorBook05, ActorHumanShip,
+    ActorHumanShipReturn)
 from .events import (EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP,
     EVENT_STORY_SCRIPT_CAPTION, EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
     EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, EVENT_CHANGE_LEVEL)
@@ -492,3 +493,106 @@ class StageTitle(Stage):
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
             post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_stage)
+
+
+class EndStage(Stage):
+    def __init__(self, *args, **kwargs):
+        Stage.__init__(self, *args, **kwargs)
+
+        evil_spaceship = ActorSpaceship(self)
+        evil_spaceship.set_position(220, -65)
+        evil_spaceship.show()
+
+        tractor_beam = ActorTracktorBeam(self)
+        tractor_beam.set_position(253, 70)
+
+        book_01 = ActorBook01(self)
+        book_01.set_position(253, 170)
+
+        book_02 = ActorBook02(self)
+        book_02.set_position(227, 190)
+
+        book_03 = ActorBook03(self)
+        book_03.set_position(240, 185)
+
+        book_04 = ActorBook04(self)
+        book_04.set_position(250, 200)
+
+        book_05 = ActorBook05(self)
+        book_05.set_position(219, 210)
+
+        human_ship = ActorHumanShipReturn(self)
+        human_ship.set_position(300, -65)
+
+        text_hero_1 = DisplayText(self, 'AFTER MANY ARDOUS BATTLES', (0, 350), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
+        text_hero_2 = DisplayText(self, 'WITH THE MORONIAN FORCES', (0, 380), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
+        text_hero_3 = DisplayText(self, 'OUR HERO RETURNS HOME', (0, 410), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
+
+        text_hero_4 = DisplayText(self, 'LET THIS BE A LESSON FOR US ALL,', (0, 350), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
+        text_hero_5 = DisplayText(self, 'THAT KNOWLEDGE', (0, 380), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
+        text_hero_6 = DisplayText(self, 'MUST BE PROTECTED AT ALL COSTS', (0, 410), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
+
+        text_hero_7 = DisplayText(self, 'FOR IF NOT, WE ALL RISK BECOMING', (0, 350), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
+        text_hero_8 = DisplayText(self, 'MORONIANS OURSELVES.', (0, 380), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
+
+        text_hero_9 = DisplayText(self, 'AND I DON\'T KNOW ABOUT YOU BUT,', (0, 350), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
+        text_hero_10 = DisplayText(self, 'I DON\'T WANT TO BE A MORONIAN!', (0, 380), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(120, 'assets/sounds/08.ogg'), horizontal_align=CenterAlign)
+
+        text_hero_11 = DisplayText(self, 'THANKS FOR PLAYING', (0, 220), GAME_FONT, 18, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
+
+        self.actors = [book_01, book_02, book_03, book_04, book_05, evil_spaceship,
+            tractor_beam, human_ship, text_hero_1, text_hero_2, text_hero_3,
+            text_hero_4, text_hero_5, text_hero_6, text_hero_7, text_hero_8,
+            text_hero_9, text_hero_10, text_hero_11]
+
+        self.script = {
+            0000: Background('assets/backgrounds/earth.png'),
+            0001: PlayMusic('assets/music/Grassy World (8-Bit_Orchestral Overture) - Main Title Theme.mp3'),
+
+            1000: ActorCommand(text_hero_1, lambda x: x.show()),
+            5000: ActorCommand(text_hero_2, lambda x: x.show()),
+            10000: ActorCommand(text_hero_3, lambda x: x.show()),
+
+
+            2000: ActorCommand(human_ship, lambda x: x.set_destination(220, 200, 0.03)),
+            2001: ActorCommand(human_ship, lambda x: x.show()),
+
+            6000: ActorCommand(human_ship, lambda x: x.set_destination(220, 200, 0.02)),
+            6001: ActorCommand(human_ship, lambda x: x.set_scale(0.8)),
+
+            9000: ActorCommand(human_ship, lambda x: x.set_destination(220, 200, 0.01)),
+            9001: ActorCommand(human_ship, lambda x: x.set_scale(0.6)),
+
+            15000: ActorCommand(human_ship, lambda x: x.set_destination(220, 200, 0.007)),
+            15001: ActorCommand(human_ship, lambda x: x.set_scale(0.4)),
+
+            15002: ActorCommand(text_hero_1, lambda x: x.hide()),
+            16000: ActorCommand(text_hero_2, lambda x: x.hide()),
+            17000: ActorCommand(text_hero_3, lambda x: x.hide()),
+
+            18000: ActorCommand(human_ship, lambda x: x.hide()),
+
+            19000: ActorCommand(text_hero_4, lambda x: x.show()),
+            24000: ActorCommand(text_hero_5, lambda x: x.show()),
+            29000: ActorCommand(text_hero_6, lambda x: x.show()),
+
+            34002: ActorCommand(text_hero_4, lambda x: x.hide()),
+            35000: ActorCommand(text_hero_5, lambda x: x.hide()),
+            36000: ActorCommand(text_hero_6, lambda x: x.hide()),
+
+            37000: ActorCommand(text_hero_7, lambda x: x.show()),
+            42000: ActorCommand(text_hero_8, lambda x: x.show()),
+
+            47002: ActorCommand(text_hero_7, lambda x: x.hide()),
+            48000: ActorCommand(text_hero_8, lambda x: x.hide()),
+
+            50000: ActorCommand(text_hero_9, lambda x: x.show()),
+            55000: ActorCommand(text_hero_10, lambda x: x.show()),
+
+            60000: ActorCommand(text_hero_9, lambda x: x.hide()),
+            61000: ActorCommand(text_hero_10, lambda x: x.hide()),
+
+            62000: ActorCommand(text_hero_11, lambda x: x.show()),
+
+            72000: End(),
+        }

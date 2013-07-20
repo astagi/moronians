@@ -568,9 +568,23 @@ class SpriteBoss2(SpriteBoss):
     enemy_class = EnemyRedSlime
 
     firing_animation_delay = 150
-    firing_delay = 1000
+    firing_delay = 900
     images = SpriteEnemy.load_sliced_sprites(80, 96, 'enemies/genie_boss_strip.png')
-    values = 5000
+    values = 10000
+    attack_points = 20
+    speed = 0.1
+    hit_points = total_hit_points = 150
+
+
+class SpriteBoss3(SpriteBoss):
+    direction = vec2d(1, 1)  # Diagonal
+
+    enemy_class = EnemyArachnid
+
+    firing_animation_delay = 150
+    firing_delay = 800
+    images = SpriteEnemy.load_sliced_sprites(100, 100, 'enemies/phantom_boss_strip.png')
+    values = 20000
     attack_points = 20
     speed = 0.1
     hit_points = total_hit_points = 150

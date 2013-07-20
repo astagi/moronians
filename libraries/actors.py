@@ -89,3 +89,7 @@ class ActorBook05(Actor):
 
 class ActorHumanShip(Actor):
     image_file = 'assets/players/human_ship.png'
+
+
+class ActorHumanShipReturn(Actor):
+    image_file = 'assets/players/human_ship_return.png'
