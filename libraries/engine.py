@@ -7,6 +7,7 @@ import sys
 
 import pygame
 
+from .classes import NoSound
 from .exceptions import SwallowEvent
 from .events import (EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP, EVENT_STORY_SCRIPT_CAPTION,
     EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
@@ -16,6 +17,7 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     PAUSE_TEXT_VERTICAL_OFFSET, START_MESSAGE_TEXT, GAME_LEVEL_TITLE,
     GAME_LEVEL_STORY, TEXT_EXIT_CONFIRMATION,
     EXIT_TEXT_VERTICAL_OFFSET)
+from .settings import SOUND_SUPPORT
 from .sprites import SpritePlayer
 from .stages import StoryStage
 from .utils import hollow_text, outlined_text, post_event, check_event
@@ -33,8 +35,8 @@ class Game(object):
         self.debug = debug
         try:
             self.module_class = import_module('modules.%s.module' % module_name).Module
-        except ImportError:
-            print 'Unable to import module %s' % module_name
+        except ImportError as exception:
+            print 'Unable to import module %s; %s' % (module_name, exception)
             exit(1)
 
     def on_init(self):
@@ -47,7 +49,10 @@ class Game(object):
         self.pause_font = pygame.font.Font(GAME_FONT, 15)
         self.enemy_font = pygame.font.Font(GAME_FONT, 12)
         self.font = pygame.font.Font(GAME_FONT, 12)
-        self.pause_sound = pygame.mixer.Sound('assets/sounds/pause.wav')
+        if SOUND_SUPPORT:
+            self.pause_sound = pygame.mixer.Sound('assets/sounds/pause.wav')
+        else:
+            self.pause_sound = NoSound()
         self.player = SpritePlayer(self)
         pygame.display.set_caption(GAME_TITLE)
         self._current_level = None

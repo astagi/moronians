@@ -6,6 +6,7 @@ from random import randint, choice
 
 import pygame
 
+from .classes import NoSound
 from .events import EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH
 from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     HEALTH_BAR_TEXT, SCORE_TEXT, SEX_MALE, ENEMY_STATE_ALIVE, ENEMY_STATE_FIRING,
@@ -13,6 +14,7 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     PLAYER_STATE_HIT, PLAYER_STATE_INVINCIBLE, PLAYER_STATE_DEFEATED, PLAYER_STATE_DEAD,
     TEXT_BOSS_HIT_POINT)
 from .utils import outlined_text
+from .settings import SOUND_SUPPORT
 from .vec2d import vec2d
 
 INTERVAL_INVINCIBLE = 1000
@@ -44,9 +46,14 @@ class SpritePlayer(SpriteCustom):
         self.miss_score_penalty = 50
         self.health_bar_image = pygame.image.load('assets/players/healthBar_100x12px_green.png').convert_alpha()
         self.score = 0
-        self.die_sound = pygame.mixer.Sound('assets/players/falldown.wav')
-        self.sound_hit = pygame.mixer.Sound('assets/players/04.ogg')
-        self.sound_misses = pygame.mixer.Sound('assets/players/05.ogg')
+        if SOUND_SUPPORT:
+            self.die_sound = pygame.mixer.Sound('assets/players/falldown.wav')
+            self.sound_hit = pygame.mixer.Sound('assets/players/04.ogg')
+            self.sound_misses = pygame.mixer.Sound('assets/players/05.ogg')
+        else:
+            self.die_sound = NoSound()
+            self.sound_hit = NoSound()
+            self.sound_misses = NoSound()
         self.sex = sex
         self.speed = 0.08
         self.fps = 8
@@ -240,8 +247,9 @@ class SpritePlayer(SpriteCustom):
     def on_win_scroll(self):
         if not self.has_scroll:
             self.has_scroll = True
-            pygame.mixer.music.load(self.music_win)
-            pygame.mixer.music.play()
+            if SOUND_SUPPORT:
+                pygame.mixer.music.load(self.music_win)
+                pygame.mixer.music.play()
             self.scroll_direction = (vec2d(self.pos[0], 0) - vec2d(self.pos)).normalized()
             self.scroll_position = ((self.pos[0] + self.size[0] / 2) - self.scroll.get_size()[0] / 2, self.pos[1] - 80)
             self.scroll_original_position = self.scroll_position
@@ -323,8 +331,10 @@ class SpriteEnemy(SpriteCustom):
             pygame.image.load('assets/explosions/smoke_puff/smoke_puff_0009.32x32.png'),
             pygame.image.load('assets/explosions/smoke_puff/smoke_puff_0010.32x32.png')
         ]
-
-        self.death_sound = pygame.mixer.Sound('assets/sounds/8bit_bomb_explosion.wav')
+        if SOUND_SUPPORT:
+            self.death_sound = pygame.mixer.Sound('assets/sounds/8bit_bomb_explosion.wav')
+        else:
+            self.death_sound = NoSound()
 
         # Calculate initial direction
         self.direction = (vec2d(self.game.surface.get_size()[0] / 2, self.game.surface.get_size()[1] / 2) - vec2d(init_position)).normalized()
@@ -447,8 +457,12 @@ class SpriteBoss(SpriteEnemy):
         self.hit_point_bar_image = pygame.image.load('assets/enemies/healthBar_100x12px_red.png').convert_alpha()
 
         self.pos = vec2d(init_position)
-        self.sound_death = pygame.mixer.Sound('assets/enemies/zombie-17.wav')
-        self.sound_hit = pygame.mixer.Sound('assets/enemies/zombie-5.wav')
+        if SOUND_SUPPORT:
+            self.sound_death = pygame.mixer.Sound('assets/enemies/zombie-17.wav')
+            self.sound_hit = pygame.mixer.Sound('assets/enemies/zombie-5.wav')
+        else:
+            self.sound_death = NoSound()
+            self.sound_hit = NoSound()
         self.death_scream_done = False
 
     def update(self, time_passed, force=False):

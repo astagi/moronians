@@ -18,6 +18,7 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     LEVEL_MODE_PLAYER_DEATH, LEVEL_MODE_GAME_OVER, GAME_LEVEL_FIRST,
     TEXT_STEAL_BOOKS_1, TEXT_STEAL_BOOKS_2, TEXT_HERO)
 from .powerups import PowerUpApple, PowerUpShield
+from .settings import SOUND_SUPPORT
 from .utils import check_event, hollow_text, outlined_text, post_event
 
 
@@ -56,11 +57,12 @@ class PlayLevel(Level):
             self.next_level = next_level
 
     def on_start(self):
-        if self.boss_level:
-            pygame.mixer.music.load(self.boss_song)
-        else:
-            pygame.mixer.music.load(self.normal_song)
-        pygame.mixer.music.play(-1)
+        if SOUND_SUPPORT:
+            if self.boss_level:
+                pygame.mixer.music.load(self.boss_song)
+            else:
+                pygame.mixer.music.load(self.normal_song)
+            pygame.mixer.music.play(-1)
         self.accept_input = True
         self.is_game_over = False
 
@@ -126,8 +128,9 @@ class PlayLevel(Level):
 
         if self.mode == LEVEL_MODE_PLAYER_DEATH:
             if pygame.time.get_ticks() > self._time_player_death + 2000:
-                pygame.mixer.music.load('assets/music/lose music 3 - 2.wav')
-                pygame.mixer.music.play()
+                if SOUND_SUPPORT:
+                    pygame.mixer.music.load('assets/music/lose music 3 - 2.wav')
+                    pygame.mixer.music.play()
                 self.mode = LEVEL_MODE_GAME_OVER
 
         if self.mode == LEVEL_MODE_COMPLETE:
@@ -178,7 +181,8 @@ class PlayLevel(Level):
         self.mode = LEVEL_MODE_PLAYER_DEATH
         self.accept_input = False
         self.result = []
-        pygame.mixer.music.stop()
+        if SOUND_SUPPORT:
+            pygame.mixer.music.stop()
 
         if not self.boss_level:
             for enemy in self.enemies:
@@ -206,7 +210,8 @@ class PlayLevel(Level):
 
     def on_level_complete(self):
         self.game.can_be_paused = False
-        pygame.mixer.music.stop()
+        if SOUND_SUPPORT:
+            pygame.mixer.music.stop()
         self.accept_input = False
         self.result = []
         self.mode = LEVEL_MODE_COMPLETE

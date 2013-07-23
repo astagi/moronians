@@ -9,6 +9,7 @@ from . import get_version
 from .actors import (ActorSpaceship, ActorTracktorBeam, ActorBook01,
     ActorBook02, ActorBook03, ActorBook04, ActorBook05, ActorHumanShip,
     ActorHumanShipReturn)
+from .classes import NoSound
 from .events import (EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP,
     EVENT_STORY_SCRIPT_CAPTION, EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
     EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, EVENT_CHANGE_LEVEL)
@@ -20,6 +21,7 @@ from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
     LEVEL_MODE_STOPPED, LEVEL_MODE_RUNNING, LEVEL_MODE_COMPLETE,
     LEVEL_MODE_PLAYER_DEATH, LEVEL_MODE_GAME_OVER, GAME_LEVEL_FIRST,
     TEXT_STEAL_BOOKS_1, TEXT_STEAL_BOOKS_2, TEXT_HERO)
+from .settings import SOUND_SUPPORT
 from .utils import check_event, hollow_text, outlined_text, post_event
 
 
@@ -110,8 +112,11 @@ class TypeWriter(TextEffect):
     """
     def __init__(self, delay, sound_file=None):
         self.delay = delay
-        if sound_file:
-            self.sound = pygame.mixer.Sound(sound_file)
+        if SOUND_SUPPORT:
+            if sound_file:
+                self.sound = pygame.mixer.Sound(sound_file)
+            else:
+                self.sound = None
         else:
             self.sound = None
         self._letter_index = 0
@@ -143,8 +148,11 @@ class TypeWriter(TextEffect):
 class Blink(TextEffect):
     def __init__(self, delay=1000, sound_file=None):
         self.delay = delay
-        if sound_file:
-            self.sound = pygame.mixer.Sound(sound_file)
+        if SOUND_SUPPORT:
+            if sound_file:
+                self.sound = pygame.mixer.Sound(sound_file)
+            else:
+                self.sound = None
         else:
             self.sound = None
         self._last_time = 0
@@ -267,7 +275,10 @@ class Background(Action):
 class PlaySound(Action):
     def __init__(self, sound_file):
         Action.__init__(self)
-        self.sound = pygame.mixer.Sound(sound_file)
+        if SOUND_SUPPORT:
+            self.sound = pygame.mixer.Sound(sound_file)
+        else:
+            self.sound = NoSound()
 
     def on_execute(self):
         Action.on_execute(self)
@@ -286,9 +297,10 @@ class PlayMusic(Action):
     def on_execute(self):
         Action.on_execute(self)
         if self._active:
-            pygame.mixer.music.stop()
-            pygame.mixer.music.load(self.music_file)
-            pygame.mixer.music.play(-1 if self.loop else 0)
+            if SOUND_SUPPORT:
+                pygame.mixer.music.stop()
+                pygame.mixer.music.load(self.music_file)
+                pygame.mixer.music.play(-1 if self.loop else 0)
             self._active = False
             self._complete = True
 
@@ -305,7 +317,8 @@ class End(Action):
             self._active = False
             self._complete = True
             if self.stop_music:
-                pygame.mixer.music.stop()
+                if SOUND_SUPPORT:
+                    pygame.mixer.music.stop()
 
 
 class ActorCommand(Action):
@@ -415,7 +428,8 @@ class StoryStage(Stage):
 
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
-            pygame.mixer.music.stop()
+            if SOUND_SUPPORT:
+                pygame.mixer.music.stop()
             post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_stage)
 
 

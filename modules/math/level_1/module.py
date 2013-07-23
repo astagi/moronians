@@ -1,6 +1,5 @@
 from libraries.events import EVENT_CHANGE_LEVEL
 from libraries.levels import PlayLevel
-#from libraries.literals import GAME_LEVEL_TITLE, GAME_LEVEL_STORY
 from libraries.maps import Map1, Map2, Map3, Map4
 from libraries.sprites import (EnemyArachnid, EnemyEyePod, EnemyFlyingBot,
     EnemyRedSlime, SpriteDarkBoss, SpriteBoss2, SpriteBoss3)
