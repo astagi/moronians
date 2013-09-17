@@ -34,3 +34,7 @@ Screenshots
 ![Story](https://raw.github.com/rosarior/moronians/master/docs/_static_/story_2.png)
 ![Game play](https://raw.github.com/rosarior/moronians/master/docs/_static_/stage.png)
 ![Boss battle](https://raw.github.com/rosarior/moronians/master/docs/_static_/boss.png)
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/rosarior/moronians/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
