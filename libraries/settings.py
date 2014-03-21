@@ -1,1 +1,1 @@
-SOUND_SUPPORT = False
+SOUND_SUPPORT = True
