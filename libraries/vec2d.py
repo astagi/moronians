@@ -54,7 +54,10 @@ class vec2d(object):
             return True
 
     def __nonzero__(self):
-        return self.x or self.y
+        if self.x or self.y:
+            return True
+        else:
+            return False
 
     # Generic operator handlers
     def _o2(self, other, f):
@@ -418,7 +421,6 @@ if __name__ == "__main__":
             v2.rotate(300)
             self.assertAlmostEquals(v.get_angle_between(v2), -60)
             v2.rotate(v2.get_angle_between(v))
-            angle = v.get_angle_between(v2)
             self.assertAlmostEquals(v.get_angle_between(v2), 0)
 
         def testHighLevel(self):
@@ -440,8 +442,8 @@ if __name__ == "__main__":
             zero_vec = vec2d(0, 0)
             self.assert_(int_vec == flt_vec)
             self.assert_(int_vec != zero_vec)
-            self.assert_((flt_vec == zero_vec) == False)
-            self.assert_((flt_vec != int_vec) == False)
+            self.assert_((flt_vec == zero_vec) is False)
+            self.assert_((flt_vec != int_vec) is False)
             self.assert_(int_vec == (3, -2))
             self.assert_(int_vec != [0, 0])
             self.assert_(int_vec != 5)

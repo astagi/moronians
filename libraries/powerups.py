@@ -1,19 +1,12 @@
 from __future__ import absolute_import
 
-from random import randint, choice
+from random import randint
 
 import pygame
 
-from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
-    HEALTH_BAR_TEXT, SCORE_TEXT, SEX_MALE, ENEMY_STATE_ALIVE, ENEMY_STATE_FIRING,
-    ENEMY_STATE_HIT, ENEMY_STATE_DEFEATED, PLAYER_STATE_ALIVE, PLAYER_STATE_FIRING,
-    PLAYER_STATE_HIT, PLAYER_STATE_INVINCIBLE, PLAYER_STATE_DEFEATED, PLAYER_STATE_DEAD,
-    TEXT_BOSS_HIT_POINT)
 
-
-class SpritePowerUp(pygame.sprite.Sprite):
+class SpritePowerUp(object):
     def __init__(self, game):
-        pygame.sprite.Sprite.__init__(self)
         self.game = game
         self.active = False
         self.sound = pygame.mixer.Sound(self.sound_file)
@@ -46,7 +39,7 @@ class SpritePowerUp(pygame.sprite.Sprite):
                         self.sound.play()
                         self.collision()
 
-    def blit(self):
+    def on_blit(self):
         if self.active:
             self.game.surface.blit(self.image, self.pos)
 
@@ -60,9 +53,9 @@ class PowerUpApple(SpritePowerUp):
     sound_file = 'assets/powerups/15.ogg'
 
     def collision(self):
-        self.game.player.health += 20
-        if self.game.player.health > self.game.player.total_health:
-            self.game.player.health = self.game.player.total_health
+        self.game.player.hit_points += 20
+        if self.game.player.hit_points > self.game.player.total_hit_points:
+            self.game.player.hit_points = self.game.player.total_hit_points
 
 
 class PowerUpShield(SpritePowerUp):
@@ -72,9 +65,7 @@ class PowerUpShield(SpritePowerUp):
 
     def collision(self):
         self.effect_active = True
-        self._time_initial = pygame.time.get_ticks()
-        self.game.player._state = PLAYER_STATE_INVINCIBLE
-        self.game.player._invincible_initial_time = pygame.time.get_ticks() + 5000
+        self.game.player.set_invincible(5000)
 
 
 class PowerUpEnemyFreeze(SpritePowerUp):
@@ -85,5 +76,4 @@ class PowerUpEnemyFreeze(SpritePowerUp):
     def collision(self):
         self.effect_active = True
         self._time_initial = pygame.time.get_ticks()
-        self.game.player._state = PLAYER_STATE_INVINCIBLE
         self.game.player._invincible_initial_time = pygame.time.get_ticks() + 5000

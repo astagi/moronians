@@ -1,379 +1,352 @@
 from __future__ import absolute_import
 
-from ast import literal_eval
-from random import randint, choice
+from random import randint
 
 import pygame
 
 from . import get_version
-from .actors import (ActorSpaceship, ActorTracktorBeam, ActorBook01,
+from .actions import ActorCommand, Background, DisplayText, End, PlaySound, PlayMusic
+from .actors import (
+    ActorSpaceship, ActorTracktorBeam, ActorBook01,
     ActorBook02, ActorBook03, ActorBook04, ActorBook05, ActorHumanShip,
-    ActorHumanShipReturn)
-from .classes import NoSound
-from .events import (EVENT_STORY_SCRIPT_DELAY_BEFORE_SHIP,
-    EVENT_STORY_SCRIPT_CAPTION, EVENT_STORY_SCRIPT_TYPE, EVENT_STORY_SCRIPT_DELAY_FOR_LAUGH,
-    EVENT_STORY_SCRIPT_POST_LAUGH_DELAY, EVENT_CHANGE_LEVEL)
-from .literals import (COLOR_ALMOST_BLACK, COLOR_BLACK, COLOR_WHITE,
-    DEFAULT_SCREENSIZE, GAME_OVER_TEXT, GAME_TITLE, PAUSE_TEXT,
-    PAUSE_TEXT_VERTICAL_OFFSET,
-    START_MESSAGE_TEXT, TEXT_YEAR, GAME_FONT, GAME_LEVEL_STORY,
-    GAME_LEVEL_TITLE, GAME_LEVEL_FIRST, VERSION_TEXT, CREDITS_TEXT, TEXT_LEVEL_COMPLETE,
-    LEVEL_MODE_STOPPED, LEVEL_MODE_RUNNING, LEVEL_MODE_COMPLETE,
-    LEVEL_MODE_PLAYER_DEATH, LEVEL_MODE_GAME_OVER, GAME_LEVEL_FIRST,
-    TEXT_STEAL_BOOKS_1, TEXT_STEAL_BOOKS_2, TEXT_HERO)
-from .settings import SOUND_SUPPORT
-from .utils import check_event, hollow_text, outlined_text, post_event
+)
+from .effects import Blink, TypeWriter
+from .events import EVENT_CHANGE_STAGE
+from .literals import (
+    COLOR_ALMOST_BLACK, COLOR_WHITE, CREDITS_TEXT, GAME_FONT,
+    GAME_OVER_TEXT, HEALTH_BAR_TEXT, LEVEL_MODE_COMPLETE,
+    LEVEL_MODE_GAME_OVER, LEVEL_MODE_PLAYER_DEATH, LEVEL_MODE_RUNNING,
+    LEVEL_MODE_STOPPED, SCORE_TEXT, START_MESSAGE_TEXT, TEXT_BOSS_HIT_POINT,
+    TEXT_FINAL_SCORE, TEXT_LEVEL_COMPLETE, TEXT_STEAL_BOOKS_1,
+    TEXT_STEAL_BOOKS_2, TEXT_HERO, TEXT_STAGE_END, TEXT_YEAR
+)
+from .powerups import PowerUpApple, PowerUpShield
+from .utils import BottomAlign, CenterAlign, LeftAlign, RightAlign, outlined_text, post_event
 
 
 class Stage(object):
-    """
-    Stage class defines a 'stage' in the playwright sense, where there is a
-    script that guides the action
-    """
-    def __init__(self, game, next_stage=None):
-        self.game = game
-        self.canvas = pygame.Surface(self.game.surface.get_size())
+    def __init__(self, next_stage=None):
         if next_stage:
             self.next_stage = next_stage
 
-        self.actors = []
-        self.script = {}
+    def add_actor(self, actor):
+        if actor not in self.actors:
+            actor.on_setup(stage=self)
+            self.actors.append(actor)
 
-    def setup(self):
-        pass
+    def on_blit(self):
+        self.on_draw_background()
 
-    def on_play(self, script):
-        self.script = script
-        self.on_start()
-
-    def on_start(self):
-        self._start_time = pygame.time.get_ticks()
-        for time, entry in self.script.items():
-            entry.on_setup(self)
-
-    def on_update(self):
         for actor in self.actors:
-            actor.on_update(self.game.time_passed)
+            actor.on_blit()
 
-        for time, entry in self.script.items():
-            entry.on_update(self.game.time_passed)
-            if pygame.time.get_ticks() > self._start_time + time:
-                entry.on_execute()
-
-    def process_event(self, event):
+    def on_draw_background(self):
         pass
 
     def on_event(self, event):
         pass
 
-    def on_blit(self):
+    def on_level_exit(self):
+        self.actors = []
+        self.script = {}
+        self._runtime_script = {}
+        pygame.mixer.music.stop()
+
+    def on_setup(self, game):
+        self.actors = []
+        self.game = game
+        self.script = {}
+        self._runtime_script = {}
+
+    def on_start(self):
+        self._start_time = pygame.time.get_ticks()
+        self._runtime_script = self.script.copy()
+
         for time, entry in self.script.items():
-            try:
-                entry.on_blit()
-            except AttributeError:
-                pass
+            entry.on_setup(stage=self)
+
+    def on_update(self):
+        if not self.game.paused:
+            for actor in self.actors:
+                actor.on_update(time_passed=self.game.time_passed)
+
+            for time, entry in self._runtime_script.items():
+                if pygame.time.get_ticks() > self._start_time + time:
+                    entry = self._runtime_script.pop(time)
+                    entry.on_execute()
+
+
+class BasePlayLevel(Stage):
+    level_song = 'assets/music/Zander Noriega - Darker Waves_0_looping.wav'
+    enemy_count = 0
+    miss_score_penalty = 50
+
+    def __init__(self, *args, **kwargs):
+        super(BasePlayLevel, self).__init__(*args, **kwargs)
+        self.game_over_font = pygame.font.Font(GAME_FONT, 32)
+        self.result = []
+        self.stage_score_value = 0
+        self.mode = LEVEL_MODE_STOPPED
+        self.display_game_over = False
+        self.display_level_complete = False
+
+    def is_all_defeated(self):
+        return self.enemies == []
+
+    def on_draw_background(self):
+        self.map.blit(self.game.surface)
+
+    def on_blit(self):
+        super(BasePlayLevel, self).on_blit()
+
+        # TODO: merge these two
+        for powerup in self.powerups:
+            powerup.on_blit()
+
+        if self.mode == LEVEL_MODE_GAME_OVER:
+            text_size = self.game_over_font.size(GAME_OVER_TEXT)
+            label = outlined_text(self.game_over_font, GAME_OVER_TEXT, COLOR_WHITE, COLOR_ALMOST_BLACK)
+            self.game.surface.blit(label, (self.game.surface.get_size()[0] / 2 - text_size[0] / 2, self.game.surface.get_size()[1] / 2 - 90))
+
+        if self.mode == LEVEL_MODE_COMPLETE:
+            if self.display_level_complete:
+                text_size = self.game_over_font.size(TEXT_LEVEL_COMPLETE)
+                label = outlined_text(self.game_over_font, TEXT_LEVEL_COMPLETE, COLOR_WHITE, COLOR_ALMOST_BLACK)
+                self.game.surface.blit(label, (self.game.surface.get_size()[0] / 2 - text_size[0] / 2, self.game.surface.get_size()[1] / 2 - 90))
+
+        # Blit health bar
+        text_size = self.font_health.size(HEALTH_BAR_TEXT)
+        label = outlined_text(self.font_health, HEALTH_BAR_TEXT, COLOR_WHITE, COLOR_ALMOST_BLACK)
+        self.game.surface.blit(label, (1, 1))
+        self.game.surface.blit(self.health_bar_image, (text_size[0] + 10, 1), area=pygame.Rect(0, 0, self.health_bar_image.get_size()[0] * self.game.player.hit_points / float(self.game.player.total_hit_points), self.health_bar_image.get_size()[1]))
+
+        # Blit score
+        score_text = '%s %d' % (SCORE_TEXT, self.game.player.score)
+        text_size = self.font_score.size(score_text)
+        label = outlined_text(self.font_score, score_text, COLOR_WHITE, COLOR_ALMOST_BLACK)
+        self.game.surface.blit(label, (self.game.surface.get_size()[0] - text_size[0] - 10, 1))
+
+    def on_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            if self.mode == LEVEL_MODE_GAME_OVER and pygame.time.get_ticks() > self._time_player_death + 2500:
+                post_event(event=EVENT_CHANGE_STAGE, stage=self.next_stage)
 
         for actor in self.actors:
-            actor.on_blit()
+            actor.on_event(event)
 
-        self.game.surface.blit(self.canvas, (0, 0))
+    def on_game_over(self):
+        self.next_stage = self.game.initial_stage
+        self.game.can_be_paused = False
+        self.mode = LEVEL_MODE_PLAYER_DEATH
+        self.accept_input = False
+        self.result = []
+        pygame.mixer.music.stop()
 
+        self._time_player_death = pygame.time.get_ticks()
 
-class Action(object):
-    def on_setup(self, stage):
-        self.stage = stage
-        self._active = False
-        self._executed = False
-        self._complete = False
+    def on_level_complete(self):
+        self.game.can_be_paused = False
+        pygame.mixer.music.stop()
+        self.accept_input = False
+        self.result = []
+        self.mode = LEVEL_MODE_COMPLETE
+        for enemy in self.enemies:
+            if enemy.is_alive():
+                enemy.on_death()
 
-    def on_execute(self):
-        if not self._active and not self._complete:
-            self._start_time = pygame.time.get_ticks()
-            self._active = True
+        self._time_level_complete = pygame.time.get_ticks()
 
-    def on_update(self, time_passed):
-        pass
+    def on_setup(self, game):
+        super(BasePlayLevel, self).on_setup(game)
 
-    def on_blit(self):
-        pass
+        self.font_health = pygame.font.Font(GAME_FONT, 12)
+        self.font_score = pygame.font.Font(GAME_FONT, 12)
+        self.health_bar_image = pygame.image.load('assets/players/healthBar_100x12px_green.png').convert_alpha()
+        self.screen_size = self.game.surface.get_size()
+        self.sound_misses = pygame.mixer.Sound('assets/players/05.ogg')
+        self.game.player.on_setup(stage=self)
+        self.game.player.show()
+        self.enemies = []
 
+    def on_start(self):
+        self.powerups = [PowerUpApple(self.game), PowerUpShield(self.game)]
 
-class TextEffect(object):
-    """
-    DisplayText effects base class
-    """
-    def on_setup(self, action):
-        self.action = action
+        pygame.mixer.music.load(self.level_song)
+        pygame.mixer.music.play(-1)
+        self.accept_input = True
+        self.is_game_over = False
 
+        self.game.can_be_paused = True
+        self.mode = LEVEL_MODE_RUNNING
 
-class TypeWriter(TextEffect):
-    """
-    Display one letter at a time with a delay and an optional sound effect
-    """
-    def __init__(self, delay, sound_file=None):
-        self.delay = delay
-        if SOUND_SUPPORT:
-            if sound_file:
-                self.sound = pygame.mixer.Sound(sound_file)
-            else:
-                self.sound = None
+    def on_update(self):
+        super(BasePlayLevel, self).on_update()
+        if not self.game.paused:
+            if self.mode == LEVEL_MODE_RUNNING:
+                for powerup in self.powerups:
+                    powerup.on_update(self.game.time_passed)
+
+            if self.mode == LEVEL_MODE_PLAYER_DEATH:
+                if pygame.time.get_ticks() > self._time_player_death + 2000:
+                    pygame.mixer.music.load('assets/music/lose music 3 - 2.wav')
+                    pygame.mixer.music.play()
+                    self.mode = LEVEL_MODE_GAME_OVER
+
+    def player_shot(self, player, answer):
+        hit = False
+
+        for enemy in self.enemies:
+            if enemy.check_hit(answer):
+                hit = True
+                player.score += enemy.score_value
+                enemy.on_death()
+                break
+
+        if hit is False:
+            self.player_misses_shot()
+
+    def player_misses_shot(self):
+        self.game.player.score -= self.miss_score_penalty
+        if self.game.player.score < 0:
+            self.game.player.score = 0
         else:
-            self.sound = None
-        self._letter_index = 0
-        self._last_letter_time = 0
-
-    def on_setup(self, action):
-        TextEffect.on_setup(self, action)
-        self.original_string = action.string
-        action.string = ''
-        self._letter_index = 0
-        self._last_letter_time = 0
-
-    def on_update(self, time_passed):
-        if self.action._active:
-            if not self._last_letter_time:
-                self._last_letter_time = self.action._start_time
-
-            if pygame.time.get_ticks() > self._last_letter_time + self.delay:
-                self._last_letter_time = pygame.time.get_ticks()
-                self._letter_index += 1
-                if self._letter_index > len(self.original_string):
-                    self._letter_index = len(self.original_string)
-                else:
-                    if self.sound:
-                        self.sound.play()
-                self.action.string = self.original_string[0:self._letter_index]
+            self.sound_misses.play()
 
 
-class Blink(TextEffect):
-    def __init__(self, delay=1000, sound_file=None):
-        self.delay = delay
-        if SOUND_SUPPORT:
-            if sound_file:
-                self.sound = pygame.mixer.Sound(sound_file)
-            else:
-                self.sound = None
-        else:
-            self.sound = None
-        self._last_time = 0
-
-    def on_update(self, time_passed):
-        if self.action._active:
-            if pygame.time.get_ticks() > self._last_time + self.delay:
-                self._last_time = pygame.time.get_ticks()
-                self.action._visible = not self.action._visible
-                if self.action._visible and self.sound:
-                    self.sound.play()
-
-
-class TextAlignment(object):
-    def get_result(self):
-        return self.position
-
-
-# Horizontal
-class LeftAlign(TextAlignment):
-    def __init__(self, action, position):
-        self.position = position
-
-
-class CenterAlign(TextAlignment):
-    def __init__(self, action, position):
-        text_size = action.font.size(action.string)
-        self.position = action.stage.canvas.get_size()[0] / 2 - text_size[0] / 2 + position
-
-
-class RightAlign(TextAlignment):
-    def __init__(self, action, position):
-        text_size = action.font.size(action.string)
-        self.position = action.stage.canvas.get_size()[0] - position
-
-
-# Vertical
-class TopAlign(TextAlignment):
-    def __init__(self, action, position):
-        self.position = position
-
-
-class MiddleAlign(TextAlignment):
-    def __init__(self, action, position):
-        text_size = action.font.size(action.string)
-        self.position = action.stage.canvas.get_size()[1] / 2 - text_size[1] / 2 + position
-
-
-class BottomtAlign(TextAlignment):
-    def __init__(self, action, position):
-        text_size = action.font.size(action.string)
-        self.position = action.stage.canvas.get_size()[1] - position
-
-
-class DisplayText(Action):
-    """
-    Show a string at a specific position on a stage
-    """
-    def __init__(self, stage, string, position, font_file, size, color, antialiasing=True, effect=None, horizontal_align=LeftAlign, vertical_align=TopAlign):
-        Action.__init__(self)
-        self.stage = stage
-        self.string = string
-
-        self.font = pygame.font.Font(font_file, size)
-        self.size = size
-        self.color = color
-        self.antialiasing = antialiasing
-        self.effect = effect
-        self._visible = False
-
-        self.position = (
-            horizontal_align(self, position[0]).get_result(),
-            vertical_align(self, position[1]).get_result()
-        )
-        self.on_setup(stage)
+class PlayLevel(BasePlayLevel):
+    enemies = []
 
     def on_setup(self, *args, **kwargs):
-        Action.on_setup(self, *args, **kwargs)
-        if self.effect:
-            self.effect.on_setup(self)
+        super(PlayLevel, self).on_setup(*args, **kwargs)
 
-    def show(self):
-        self._visible = True
-        self.on_execute()
+        for i in range(self.enemy_count):
+            self.spawn_enemy(self.enemy_class)
 
-    def hide(self):
-        self._visible = False
-        self._active = False
+    def on_update(self):
+        super(PlayLevel, self).on_update()
+        if self.is_all_defeated():
+            if self.game.player.is_alive():
+                self.game.player.score += self.stage_score_value
+                post_event(event=EVENT_CHANGE_STAGE, stage=self.next_stage)
 
-    def on_update(self, time_passed):
-        if self.effect:
-            self.effect.on_update(time_passed)
+    def spawn_enemy(self, enemy_class, origin_point=None, speed=None):
+        if not origin_point:
+            screen_size = self.game.surface.get_size()
+            origin_point = (randint(0, screen_size[0]), randint(0, screen_size[1]))
+        question, answer = self.question_function()
+        enemy_instance = enemy_class(game=self.game, font=self.game.enemy_font, question=question, answer=answer, init_position=origin_point, speed=speed)
+        self.enemies.append(enemy_instance)
+        self.add_actor(enemy_instance)
+        enemy_instance.show()
 
-    def on_blit(self):
-        if self._active and self._visible:
-            self.stage.canvas.blit(self.font.render(self.string, self.antialiasing, self.color), self.position)
 
-
-class Background(Action):
-    def __init__(self, image_file, fit=False):
-        Action.__init__(self)
-        self.image = pygame.image.load(image_file).convert()
-        self.fit = fit
-
-    def on_setup(self, stage):
-        Action.on_setup(self, stage)
-        if self.fit:
-            self.image = pygame.transform.scale(self.image, (self.stage.game.surface.get_size()[0], self.stage.game.surface.get_size()[1]))
+class BossLevel(PlayLevel):
+    level_song = 'assets/music/hold the line_1.ogg'
 
     def on_blit(self):
-        if self._active:
-            self.stage.canvas.blit(self.image, (0, 0))
+        super(BossLevel, self).on_blit()
 
-    def on_execute(self):
-        Action.on_execute(self)
-        if self._active:
-            self._complete = True
+        # Blit health bar
+        if self.boss.is_alive():
+            HP_BAR_HORIZONTAL_POSITION = 220
+            HP_BAR_VERTICAL_POSITION = 0
+            text_size = self.game.font.size(TEXT_BOSS_HIT_POINT)
+            label = outlined_text(self.game.font, TEXT_BOSS_HIT_POINT, COLOR_WHITE, COLOR_ALMOST_BLACK)
+            self.game.surface.blit(label, (HP_BAR_HORIZONTAL_POSITION, HP_BAR_VERTICAL_POSITION))
+            self.game.surface.blit(self.hit_point_bar_image, (text_size[0] + HP_BAR_HORIZONTAL_POSITION + 5, HP_BAR_VERTICAL_POSITION), area=pygame.Rect(0, 0, self.hit_point_bar_image.get_size()[0] * self.boss.hit_points / float(self.boss.total_hit_points), self.hit_point_bar_image.get_size()[1]))
 
+    def on_level_complete(self):
+        super(BossLevel, self).on_level_complete()
+        self.game.shake_screen = True
 
-class PlaySound(Action):
-    def __init__(self, sound_file):
-        Action.__init__(self)
-        if SOUND_SUPPORT:
-            self.sound = pygame.mixer.Sound(sound_file)
-        else:
-            self.sound = NoSound()
+    def on_setup(self, game):
+        super(BossLevel, self).on_setup(game)
+        self.boss = self.boss_class(game=self.game)
+        self.boss.on_setup(stage=self)
+        self.boss.show()
+        self.enemies.append(self.boss)
+        self.hit_point_bar_image = pygame.image.load('assets/enemies/healthBar_100x12px_red.png').convert_alpha()
 
-    def on_execute(self):
-        Action.on_execute(self)
-        if self._active:
-            self.sound.play()
-            self._active = False
-            self._complete = True
+    def on_update(self):
+        super(PlayLevel, self).on_update()
+        if self.mode == LEVEL_MODE_COMPLETE:
+            self.boss.set_rotation(randint(1, 360))
 
+            if pygame.time.get_ticks() > self._time_level_complete + 2000:
+                self.game.shake_screen = False
+                self.boss.set_rotation(0)
 
-class PlayMusic(Action):
-    def __init__(self, music_file, loop=False):
-        Action.__init__(self)
-        self.loop = loop
-        self.music_file = music_file
+            if pygame.time.get_ticks() > self._time_level_complete + 4000:
+                self.game.player.on_win_scroll()
+                self.display_level_complete = True
 
-    def on_execute(self):
-        Action.on_execute(self)
-        if self._active:
-            if SOUND_SUPPORT:
-                pygame.mixer.music.stop()
-                pygame.mixer.music.load(self.music_file)
-                pygame.mixer.music.play(-1 if self.loop else 0)
-            self._active = False
-            self._complete = True
+            if pygame.time.get_ticks() > self._time_level_complete + 8000:
+                self.display_level_complete = True
 
+            if pygame.time.get_ticks() > self._time_level_complete + 10000:
+                self.game.player.reset_scroll()
+                post_event(event=EVENT_CHANGE_STAGE, stage=self.next_stage)
 
-class End(Action):
-    def __init__(self, stop_music=True):
-        Action.__init__(self)
-        self.stop_music = stop_music
-
-    def on_execute(self):
-        Action.on_execute(self)
-        if self._active:
-            post_event(event=EVENT_CHANGE_LEVEL, mode=self.stage.next_stage)
-            self._active = False
-            self._complete = True
-            if self.stop_music:
-                if SOUND_SUPPORT:
-                    pygame.mixer.music.stop()
+    def player_shot(self, player, answer):
+        super(BossLevel, self).player_shot(player, answer)
+        self.boss.check_hit(answer)
 
 
-class ActorCommand(Action):
-    def __init__(self, actor, command):
-        Action.__init__(self)
-        self.actor = actor
-        self.command = command
+class StageTitle(Stage):
+    def on_setup(self, *args, **kwargs):
+        super(StageTitle, self).on_setup(*args, **kwargs)
+        text_press_enter = DisplayText(string=START_MESSAGE_TEXT, position=(0, 80), font_file=GAME_FONT, size=24, effect=Blink(200), horizontal_align=CenterAlign, vertical_align=BottomAlign)
+        text_credit = DisplayText(string=CREDITS_TEXT, position=(0, 18), font_file=GAME_FONT, size=9, horizontal_align=CenterAlign, vertical_align=BottomAlign)
+        text_version = DisplayText(string=get_version(), position=(100, 18), font_file=GAME_FONT, size=9, horizontal_align=RightAlign, vertical_align=BottomAlign)
 
-    def on_execute(self):
-        Action.on_execute(self)
-        if self._active:
-            self.command(self.actor)
-            self._active = False
-            self._complete = True
-
-
-class StoryStage(Stage):
-    def __init__(self, *args, **kwargs):
-        Stage.__init__(self, *args, **kwargs)
-
-        evil_spaceship = ActorSpaceship(self)
-        evil_spaceship.set_position(220, -65)
-        evil_spaceship.show()
-
-        tractor_beam = ActorTracktorBeam(self)
-        tractor_beam.set_position(253, 70)
-
-        book_01 = ActorBook01(self)
-        book_01.set_position(253, 170)
-
-        book_02 = ActorBook02(self)
-        book_02.set_position(227, 190)
-
-        book_03 = ActorBook03(self)
-        book_03.set_position(240, 185)
-
-        book_04 = ActorBook04(self)
-        book_04.set_position(250, 200)
-
-        book_05 = ActorBook05(self)
-        book_05.set_position(219, 210)
-
-        human_ship = ActorHumanShip(self)
-        human_ship.set_position(220, 200)
-
-        text_time = DisplayText(self, TEXT_YEAR, (0, 400), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(150, 'assets/sounds/08.ogg'), horizontal_align=CenterAlign)
-        text_book_1 = DisplayText(self, TEXT_STEAL_BOOKS_1, (0, 350), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(50), horizontal_align=CenterAlign)
-        text_book_2 = DisplayText(self, TEXT_STEAL_BOOKS_2, (0, 380), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(50), horizontal_align=CenterAlign)
-        text_hero = DisplayText(self, TEXT_HERO, (0, 350), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(50), horizontal_align=CenterAlign)
-
-        self.actors = [book_01, book_02, book_03, book_04, book_05, evil_spaceship,
-            tractor_beam, human_ship, text_time, text_book_1, text_book_2, text_hero]
+        self.game.can_be_pause = False
+        self.game.ask_exit_confirm = False
 
         self.script = {
-            0000: Background('assets/backgrounds/earth.png'),
+            0000: Background(image_file='assets/backgrounds/game_title.png', fit=True),
+            0001: PlayMusic('assets/music/OveMelaaTranceBitBit.ogg', loop=True),
+            0002: ActorCommand(text_press_enter, lambda x: x.show()),
+            0003: ActorCommand(text_credit, lambda x: x.show()),
+            0004: ActorCommand(text_version, lambda x: x.show()),
+        }
+
+    def on_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            post_event(event=EVENT_CHANGE_STAGE, stage=self.next_stage)
+
+
+class BaseStoryStage(Stage):
+    def on_setup(self, *args, **kwargs):
+        super(BaseStoryStage, self).on_setup(*args, **kwargs)
+        self.game.can_be_pause = False
+        self.game.ask_exit_confirm = True
+
+    def on_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            post_event(event=EVENT_CHANGE_STAGE, stage=self.next_stage)
+
+
+class StoryStage(BaseStoryStage):
+    def on_setup(self, *args, **kwargs):
+        super(StoryStage, self).on_setup(*args, **kwargs)
+        evil_spaceship = ActorSpaceship(game=self.game)
+
+        tractor_beam = ActorTracktorBeam(game=self.game)
+        book_01 = ActorBook01(game=self.game)
+        book_02 = ActorBook02(game=self.game)
+        book_03 = ActorBook03(game=self.game)
+        book_04 = ActorBook04(game=self.game)
+        book_05 = ActorBook05(game=self.game)
+
+        human_ship = ActorHumanShip(game=self.game)
+
+        text_time = DisplayText(string=TEXT_YEAR, position=(0, 400), effect=TypeWriter(150, 'assets/sounds/08.ogg'), horizontal_align=CenterAlign)
+        text_book_1 = DisplayText(string=TEXT_STEAL_BOOKS_1, position=(0, 350), effect=TypeWriter(50), horizontal_align=CenterAlign)
+        text_book_2 = DisplayText(string=TEXT_STEAL_BOOKS_2, position=(0, 380), effect=TypeWriter(50), horizontal_align=CenterAlign)
+        text_hero = DisplayText(string=TEXT_HERO, position=(0, 350), effect=TypeWriter(50), horizontal_align=CenterAlign)
+
+        self.script = {
+            0000: Background(image_file='assets/backgrounds/earth.png'),
             0001: PlayMusic('assets/music/LongDarkLoop.ogg'),
 
             1000: ActorCommand(text_time, lambda x: x.show()),
@@ -385,27 +358,35 @@ class StoryStage(Stage):
             15000: ActorCommand(text_book_1, lambda x: x.hide()),
             15001: ActorCommand(text_book_2, lambda x: x.hide()),
 
-            16501: ActorCommand(evil_spaceship, lambda x: x.set_destination(235, 30, 0.04)),
+            16500: ActorCommand(evil_spaceship, lambda x: x.set_position(220, -65)),
+            16501: ActorCommand(evil_spaceship, lambda x: x.show()),
+            16502: ActorCommand(evil_spaceship, lambda x: x.set_destination(235, 30, 0.04)),
             17500: ActorCommand(evil_spaceship, lambda x: x.set_destination(235, 30, 0.03)),
             19000: ActorCommand(evil_spaceship, lambda x: x.set_destination(235, 30, 0.01)),
 
-            21000: ActorCommand(tractor_beam, lambda x: x.show()),
+            21000: ActorCommand(tractor_beam, lambda x: x.set_position(253, 70)),
+            21001: ActorCommand(tractor_beam, lambda x: x.show()),
             21200: ActorCommand(tractor_beam, lambda x: x.strobe_start()),
 
             22100: ActorCommand(book_01, lambda x: x.set_destination(240, 40, 0.02)),
-            22101: ActorCommand(book_01, lambda x: x.show()),
+            22101: ActorCommand(book_01, lambda x: x.set_position(253, 170)),
+            22102: ActorCommand(book_01, lambda x: x.show()),
 
             22300: ActorCommand(book_02, lambda x: x.set_destination(240, 40, 0.03)),
-            22301: ActorCommand(book_02, lambda x: x.show()),
+            22301: ActorCommand(book_02, lambda x: x.set_position(227, 190)),
+            22302: ActorCommand(book_02, lambda x: x.show()),
 
             22500: ActorCommand(book_03, lambda x: x.set_destination(240, 40, 0.04)),
-            22501: ActorCommand(book_03, lambda x: x.show()),
+            22501: ActorCommand(book_03, lambda x: x.set_position(240, 185)),
+            22502: ActorCommand(book_03, lambda x: x.show()),
 
             22700: ActorCommand(book_04, lambda x: x.set_destination(240, 40, 0.02)),
-            22701: ActorCommand(book_04, lambda x: x.show()),
+            22701: ActorCommand(book_04, lambda x: x.set_position(250, 200)),
+            22702: ActorCommand(book_04, lambda x: x.show()),
 
             22900: ActorCommand(book_05, lambda x: x.set_destination(240, 40, 0.04)),
-            22901: ActorCommand(book_05, lambda x: x.show()),
+            22901: ActorCommand(book_05, lambda x: x.set_position(219, 210)),
+            22902: ActorCommand(book_05, lambda x: x.show()),
 
             31000: ActorCommand(tractor_beam, lambda x: x.hide()),
             31001: ActorCommand(book_01, lambda x: x.hide()),
@@ -414,38 +395,29 @@ class StoryStage(Stage):
             31004: ActorCommand(book_04, lambda x: x.hide()),
             31005: ActorCommand(book_05, lambda x: x.hide()),
 
-            32500: ActorCommand(evil_spaceship, lambda x: x.set_destination(300, -65, 0.04)),
-            32500: ActorCommand(evil_spaceship, lambda x: x.set_destination(300, -65, 0.08)),
+            32500: ActorCommand(evil_spaceship, lambda x: x.set_destination(300, -65, 0.03)),
+            32500: ActorCommand(evil_spaceship, lambda x: x.set_destination(300, -65, 0.07)),
 
             34500: PlaySound('assets/sounds/evil-laughter-witch.ogg'),
 
             39000: ActorCommand(text_hero, lambda x: x.show()),
-            42000: ActorCommand(human_ship, lambda x: x.set_destination(300, -65, 0.08)),
-            42001: ActorCommand(human_ship, lambda x: x.show()),
+            42000: ActorCommand(human_ship, lambda x: x.set_position(220, 200)),
+            42001: ActorCommand(human_ship, lambda x: x.set_destination(300, -65, 0.07)),
+            42002: ActorCommand(human_ship, lambda x: x.show()),
             46999: ActorCommand(text_hero, lambda x: x.hide()),
             47000: End(),
         }
 
-    def on_event(self, event):
-        if event.type == pygame.KEYDOWN:
-            if SOUND_SUPPORT:
-                pygame.mixer.music.stop()
-            post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_stage)
 
+class StagePlanetTravel(BaseStoryStage):
+    def on_setup(self, *args, **kwargs):
+        super(StagePlanetTravel, self).on_setup(*args, **kwargs)
 
-class StagePlanetTravel(Stage):
-    def __init__(self, *args, **kwargs):
-        Stage.__init__(self, *args, **kwargs)
-
-        human_ship = ActorHumanShip(self)
-        human_ship.set_position(150, 448)
-
-        planet_name = DisplayText(self, self.planet_name, (0, 400), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(150, 'assets/sounds/19.ogg'), horizontal_align=CenterAlign)
-
-        self.actors = [human_ship, planet_name]
+        human_ship = ActorHumanShip(game=self.game)
+        planet_name = DisplayText(string=self.planet_name, position=(0, 400), effect=TypeWriter(150, 'assets/sounds/19.ogg'), horizontal_align=CenterAlign)
 
         self.script = {
-            0000: Background(self.background_file),
+            0000: Background(image_file=self.background_file),
 
             2000: ActorCommand(planet_name, lambda x: x.show()),
             6000: ActorCommand(planet_name, lambda x: x.hide()),
@@ -453,7 +425,8 @@ class StagePlanetTravel(Stage):
             6002: PlaySound('assets/players/ship_engine.wav'),
 
             8000: ActorCommand(human_ship, lambda x: x.set_destination(300, 200, 0.08)),
-            8001: ActorCommand(human_ship, lambda x: x.show()),
+            8001: ActorCommand(human_ship, lambda x: x.set_position(150, 448)),
+            8002: ActorCommand(human_ship, lambda x: x.show()),
 
             8500: ActorCommand(human_ship, lambda x: x.set_scale(0.9)),
             8501: ActorCommand(human_ship, lambda x: x.set_destination(300, 200, 0.07)),
@@ -481,108 +454,55 @@ class StagePlanetTravel(Stage):
             15500: End(),
         }
 
-    def on_event(self, event):
-        if event.type == pygame.KEYDOWN:
-            post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_stage)
 
 
-class StageTitle(Stage):
-    def __init__(self, *args, **kwargs):
-        Stage.__init__(self, *args, **kwargs)
+class StageEnd(Stage):
+    def on_setup(self, *args, **kwargs):
+        super(StageEnd, self).on_setup(*args, **kwargs)
 
-        text_press_enter = DisplayText(self, START_MESSAGE_TEXT, (0, 80), GAME_FONT, 24, COLOR_WHITE, False, Blink(200), horizontal_align=CenterAlign, vertical_align=BottomtAlign)
-        text_credit = DisplayText(self, CREDITS_TEXT, (0, 18), GAME_FONT, 9, COLOR_WHITE, False, horizontal_align=CenterAlign, vertical_align=BottomtAlign)
-        text_version = DisplayText(self, get_version(), (100, 18), GAME_FONT, 9, COLOR_WHITE, False, horizontal_align=RightAlign, vertical_align=BottomtAlign)
+        human_ship = ActorHumanShip(game=self.game)
+        text_score = DisplayText(string='%s: %d' % (TEXT_FINAL_SCORE, self.game.player.score), position=(0, 100), effect=TypeWriter(110), horizontal_align=CenterAlign)
 
-        self.actors = [text_press_enter, text_credit, text_version]
-
-        self.script = {
-            0000: Background('assets/backgrounds/game_title.png', fit=True),
-            0001: PlayMusic('assets/music/OveMelaaTranceBitBit.ogg', loop=True),
-            0002: ActorCommand(text_press_enter, lambda x: x.show()),
-            0003: ActorCommand(text_credit, lambda x: x.show()),
-            0004: ActorCommand(text_version, lambda x: x.show()),
-        }
-
-    def on_event(self, event):
-        if event.type == pygame.KEYDOWN:
-            post_event(event=EVENT_CHANGE_LEVEL, mode=self.next_stage)
-
-
-class EndStage(Stage):
-    def __init__(self, *args, **kwargs):
-        Stage.__init__(self, *args, **kwargs)
-
-        evil_spaceship = ActorSpaceship(self)
-        evil_spaceship.set_position(220, -65)
-        evil_spaceship.show()
-
-        tractor_beam = ActorTracktorBeam(self)
-        tractor_beam.set_position(253, 70)
-
-        book_01 = ActorBook01(self)
-        book_01.set_position(253, 170)
-
-        book_02 = ActorBook02(self)
-        book_02.set_position(227, 190)
-
-        book_03 = ActorBook03(self)
-        book_03.set_position(240, 185)
-
-        book_04 = ActorBook04(self)
-        book_04.set_position(250, 200)
-
-        book_05 = ActorBook05(self)
-        book_05.set_position(219, 210)
-
-        human_ship = ActorHumanShipReturn(self)
-        human_ship.set_position(300, -65)
-
-        text_hero_1 = DisplayText(self, 'AFTER MANY ARDOUS BATTLES', (0, 350), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
-        text_hero_2 = DisplayText(self, 'WITH THE MORONIAN FORCES', (0, 380), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
-        text_hero_3 = DisplayText(self, 'OUR HERO RETURNS HOME', (0, 410), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
-
-        text_hero_4 = DisplayText(self, 'LET THIS BE A LESSON FOR US ALL,', (0, 350), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
-        text_hero_5 = DisplayText(self, 'THAT KNOWLEDGE', (0, 380), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
-        text_hero_6 = DisplayText(self, 'MUST BE PROTECTED AT ALL COSTS', (0, 410), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
-
-        text_hero_7 = DisplayText(self, 'FOR IF NOT, WE ALL RISK BECOMING', (0, 350), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
-        text_hero_8 = DisplayText(self, 'MORONIANS OURSELVES.', (0, 380), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
-
-        text_hero_9 = DisplayText(self, 'AND I DON\'T KNOW ABOUT YOU BUT,', (0, 350), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
-        text_hero_10 = DisplayText(self, 'I DON\'T WANT TO BE A MORONIAN!', (0, 380), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(120, 'assets/sounds/08.ogg'), horizontal_align=CenterAlign)
-
-        text_hero_11 = DisplayText(self, 'THANKS FOR PLAYING', (0, 220), GAME_FONT, 18, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
-
-        text_score = DisplayText(self, 'FINAL SCORE: %d' % self.game.player.score, (0, 100), GAME_FONT, 15, COLOR_WHITE, False, TypeWriter(110), horizontal_align=CenterAlign)
-
-        self.actors = [book_01, book_02, book_03, book_04, book_05, evil_spaceship,
-            tractor_beam, human_ship, text_hero_1, text_hero_2, text_hero_3,
-            text_hero_4, text_hero_5, text_hero_6, text_hero_7, text_hero_8,
-            text_hero_9, text_hero_10, text_hero_11, text_score]
+        text_hero_1 = DisplayText(string=TEXT_STAGE_END[0], position=(0, 350), effect=TypeWriter(110), horizontal_align=CenterAlign)
+        text_hero_2 = DisplayText(string=TEXT_STAGE_END[1], position=(0, 380), effect=TypeWriter(110), horizontal_align=CenterAlign)
+        text_hero_3 = DisplayText(string=TEXT_STAGE_END[2], position=(0, 410), effect=TypeWriter(110), horizontal_align=CenterAlign)
+        text_hero_4 = DisplayText(string=TEXT_STAGE_END[3], position=(0, 350), effect=TypeWriter(110), horizontal_align=CenterAlign)
+        text_hero_5 = DisplayText(string=TEXT_STAGE_END[4], position=(0, 380), effect=TypeWriter(110), horizontal_align=CenterAlign)
+        text_hero_6 = DisplayText(string=TEXT_STAGE_END[5], position=(0, 410), effect=TypeWriter(110), horizontal_align=CenterAlign)
+        text_hero_7 = DisplayText(string=TEXT_STAGE_END[6], position=(0, 350), effect=TypeWriter(110), horizontal_align=CenterAlign)
+        text_hero_8 = DisplayText(string=TEXT_STAGE_END[7], position=(0, 380), effect=TypeWriter(110), horizontal_align=CenterAlign)
+        text_hero_9 = DisplayText(string=TEXT_STAGE_END[8], position=(0, 350), effect=TypeWriter(110), horizontal_align=CenterAlign)
+        text_hero_10 = DisplayText(string=TEXT_STAGE_END[9], position=(0, 380), effect=TypeWriter(120, 'assets/sounds/08.ogg'), horizontal_align=CenterAlign)
+        text_hero_11 = DisplayText(string=TEXT_STAGE_END[10], position=(0, 220), effect=TypeWriter(110), horizontal_align=CenterAlign)
 
         self.script = {
-            0000: Background('assets/backgrounds/earth.png'),
+            0000: Background(image_file='assets/backgrounds/earth.png'),
             0001: PlayMusic('assets/music/Grassy World (8-Bit_Orchestral Overture) - Main Title Theme.mp3'),
 
             1000: ActorCommand(text_hero_1, lambda x: x.show()),
             5000: ActorCommand(text_hero_2, lambda x: x.show()),
             10000: ActorCommand(text_hero_3, lambda x: x.show()),
 
+            2000: ActorCommand(human_ship, lambda x: x.set_rotation(160)),
+            2001: ActorCommand(human_ship, lambda x: x.set_destination(220, 200, 0.03)),
+            2002: ActorCommand(human_ship, lambda x: x.set_position(300, -65)),
+            2003: ActorCommand(human_ship, lambda x: x.show()),
 
-            2000: ActorCommand(human_ship, lambda x: x.set_destination(220, 200, 0.03)),
-            2001: ActorCommand(human_ship, lambda x: x.show()),
+            2010: ActorCommand(text_score, lambda x: x.show()),
 
             6000: ActorCommand(human_ship, lambda x: x.set_destination(220, 200, 0.02)),
             6001: ActorCommand(human_ship, lambda x: x.set_scale(0.8)),
+            6002: ActorCommand(human_ship, lambda x: x.set_rotation(170)),
 
             9000: ActorCommand(human_ship, lambda x: x.set_destination(220, 200, 0.01)),
             9001: ActorCommand(human_ship, lambda x: x.set_scale(0.6)),
+            9002: ActorCommand(human_ship, lambda x: x.set_rotation(180)),
 
             15000: ActorCommand(human_ship, lambda x: x.set_destination(220, 200, 0.007)),
             15001: ActorCommand(human_ship, lambda x: x.set_scale(0.4)),
+            15002: ActorCommand(human_ship, lambda x: x.set_rotation(190)),
 
-            15002: ActorCommand(text_hero_1, lambda x: x.hide()),
+            15004: ActorCommand(text_hero_1, lambda x: x.hide()),
             16000: ActorCommand(text_hero_2, lambda x: x.hide()),
             17000: ActorCommand(text_hero_3, lambda x: x.hide()),
 
@@ -609,9 +529,6 @@ class EndStage(Stage):
             61000: ActorCommand(text_hero_10, lambda x: x.hide()),
 
             62000: ActorCommand(text_hero_11, lambda x: x.show()),
-
-            2000: ActorCommand(text_score, lambda x: x.show()),
-
 
             72000: End(),
         }

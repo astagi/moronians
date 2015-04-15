@@ -1,15 +1,23 @@
 import pygame
 from pygame import *
 
+from .literals import MAP_TILE_SET
+
 
 class Map(object):
     def __init__(self):
         pass
 
+    def blit(self, surface):
+        for y in range(len(self.grid)):
+            for x in range(len(self.grid[y])):
+                location = (x * 32, y * 32)
+                surface.blit(self.tileset, location, self.grid[y][x])
+
 
 class Map1(Map):
     def __init__(self):
-        self.tileset = pygame.image.load('assets/tilesets/TileA4.png')
+        self.tileset = pygame.image.load(MAP_TILE_SET)
 
         i = pygame.Rect(321, 353, 32, 32)  # area of source image containing bush
         q = pygame.Rect(320, 384, 32, 32)  # area of source image containing bush
@@ -35,7 +43,7 @@ class Map1(Map):
 
 class Map2(Map):
     def __init__(self):
-        self.tileset = pygame.image.load('assets/tilesets/TileA4.png')
+        self.tileset = pygame.image.load(MAP_TILE_SET)
 
         p = pygame.Rect(128, 230, 32, 32)  # area of source image containing pavement
         g = pygame.Rect(160, 230, 32, 32)  # area of source image containing grass
@@ -60,11 +68,9 @@ class Map2(Map):
 
 class Map3(Map):
     def __init__(self):
-        self.tileset = pygame.image.load('assets/tilesets/TileA4.png')
+        self.tileset = pygame.image.load(MAP_TILE_SET)
 
         p = pygame.Rect(450, 96, 32, 32)  # area of source image containing pavement
-        g = pygame.Rect(160, 230, 32, 32)  # area of source image containing grass
-        s = pygame.Rect(128, 416, 32, 32)  # area of source image containing sand/dirt
         b = pygame.Rect(288, 320, 32, 32)  # area of source image containing bush
         x = pygame.Rect(384, 32, 32, 32)  # area of source image containing bush
 
@@ -86,7 +92,7 @@ class Map3(Map):
 
 class Map4(Map):
     def __init__(self):
-        self.tileset = pygame.image.load('assets/tilesets/TileA4.png')
+        self.tileset = pygame.image.load(MAP_TILE_SET)
 
         p = pygame.Rect(288, 0, 32, 32)  # area of source image containing pavement
         g = pygame.Rect(416, 0, 32, 32)  # area of source image containing grass

@@ -1,5 +1,3 @@
-#from libraries.literals import GAME_LEVEL_FIRST
-
 # Game levels
 GAME_LEVEL_TITLE = 100
 GAME_LEVEL_STORY = 1
