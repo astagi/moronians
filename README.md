@@ -5,7 +5,7 @@ In the year 2023 an alien civilization tries to enslave humanity by stealing all
 
 License
 -------
-This project is open sourced under [GNU GPL Version 3](http://www.gnu.org/licenses/gpl-3.0.html).
+This project is open sourced under [Apache License 2.0](http://www.apache.org/licenses/).
 
 
 Author
