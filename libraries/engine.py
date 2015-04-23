@@ -125,7 +125,7 @@ class Game(object):
             except SwallowEvent:
                 pass
             else:
-                if self._current_stage:
+                if self._current_stage is not None:
                     self.module.stages[self._current_stage].on_event(event)
 
     def on_setup(self):
