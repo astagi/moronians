@@ -26,7 +26,7 @@ from .utils import BottomAlign, CenterAlign, LeftAlign, RightAlign, outlined_tex
 
 class Stage(object):
     def __init__(self, next_stage=None):
-        if next_stage:
+        if next_stage is not None:
             self.next_stage = next_stage
 
     def add_actor(self, actor):
